@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NAEI Multi-Group Pollutant Viewer</title>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    select, button { margin: 6px; padding: 6px; }
+    #chart_div { width: 100%; height: 65vh; margin-top: 25px; }
+    #groupContainer { margin-top: 10px; }
+    .groupRow { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .groupControls { margin-top: 10px; }
+    .groupRow.dragging { opacity: 0.5; }
+  </style>
+
+  <script>
+    google.charts.load('current', { packages: ['corechart'] });
+
+    const DATA_SHEET_URL =
+      'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=23ds_group_data&tq=SELECT%20*';
+    const UNIT_SHEET_URL =
+      'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=Pollutant&tq=SELECT%20*';
+
+    let globalRows = [];
+    let globalHeaders = [];
+    let pollutantUnits = {};
+    let groupedData = {};
+
+    const baseColors = {
+      ecodesign: '#FFA500', // orange
+      fireplace: '#FF0000', // red
+      gas: '#007BFF',       // blue
+      power: '#00AA00',     // green
+      road: '#18E7CF'       // turquoise
+    };
+
+    function shadeColor(color, percent) {
+      const num = parseInt(color.replace("#",""),16),
+        amt = Math.round(2.55 * percent),
+        R = (num >> 16) + amt,
+        G = (num >> 8 & 0x00FF) + amt,
+        B = (num & 0x0000FF) + amt;
+      return "#" + (
+        0x1000000 +
+        (R<255?R<1?0:R:255)*0x10000 +
+        (G<255?G<1?0:G:255)*0x100 +
+        (B<255?B<1?0:B:255)
+      ).toString(16).slice(1);
+    }
+
+    function getColorForGroup(groupName, indexWithinCategory = 0) {
+      const name = groupName.toLowerCase();
+      let base;
+      if (name.includes('ecodesign')) base = baseColors.ecodesign;
+      else if (name.includes('fireplace')) base = baseColors.fireplace;
+      else if (name.includes('gas')) base = baseColors.gas;
+      else if (name.includes('power')) base = baseColors.power;
+      else if (name.includes('road')) base = baseColors.road;
+      else base = '#999999';
+      const shade = (indexWithinCategory % 2 === 0 ? 15 : -10) * indexWithinCategory;
+      return shadeColor(base, shade);
+    }
+
+    async function fetchGVizData(url) {
+      const res = await fetch(url);
+      const text = await res.text();
+      if (!text.startsWith('/*O_o*/')) throw new Error('Sheet not accessible.');
+      return JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    }
+
+    async function loadUnits() {
+      const json = await fetchGVizData(UNIT_SHEET_URL);
+      json.table.rows.forEach(r => {
+        const cells = r.c.map(c => (c ? c.v : null));
+        if (cells[0] && cells[1]) pollutantUnits[cells[0]] = cells[1];
+      });
+    }
+
+    async function loadData() {
+      const json = await fetchGVizData(DATA_SHEET_URL);
+      const headers = json.table.cols.map(c => c.label);
+      const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : null)));
+      globalHeaders = headers;
+      globalRows = rows;
+      groupedData = {};
+      rows.forEach(row => {
+        const group = row[0];
+        const pollutant = row[1];
+        if (!groupedData[pollutant]) groupedData[pollutant] = {};
+        groupedData[pollutant][group] = row;
+      });
+    }
+
+    async function init() {
+      await loadUnits();
+      await loadData();
+      setupSelectors();
+      addGroupSelector("All");
+      document.getElementById("pollutantSelect").value = "PM2.5";
+      updateChart();
+    }
+
+    function setupSelectors() {
+      const pollutants = [...new Set(globalRows.map(r => r[1]))];
+      const select = document.getElementById("pollutantSelect");
+      pollutants.forEach(p => select.add(new Option(p, p)));
+
+      const headers = globalHeaders.slice(2);
+      const years = headers.map(h => h.replace(/^f/, ""));
+      const start = document.getElementById("startYear");
+      const end = document.getElementById("endYear");
+      years.forEach(y => {
+        start.add(new Option(y, y));
+        end.add(new Option(y, y));
+      });
+      start.value = years[0];
+      end.value = years[years.length - 1];
+
+      document.getElementById("pollutantSelect").addEventListener("change", updateChart);
+      document.getElementById("startYear").addEventListener("change", updateChart);
+      document.getElementById("endYear").addEventListener("change", updateChart);
+    }
+
+    function addGroupSelector(defaultValue = "") {
+      const container = document.getElementById("groupContainer");
+      const div = document.createElement("div");
+      div.className = "groupRow";
+      div.draggable = true;
+
+      const groupSelect = document.createElement("select");
+      groupSelect.innerHTML = '<option value="">Select group</option>';
+      const allGroups = [...new Set(globalRows.map(r => r[0]))];
+      allGroups.forEach(g => groupSelect.add(new Option(g, g)));
+      if (defaultValue) groupSelect.value = defaultValue;
+      groupSelect.addEventListener("change", updateChart);
+
+      const dragHandle = document.createElement("span");
+      dragHandle.textContent = "⠿";
+      dragHandle.style.cursor = "grab";
+      dragHandle.style.marginRight = "6px";
+
+      div.appendChild(dragHandle);
+      div.appendChild(groupSelect);
+      container.appendChild(div);
+
+      addDragAndDropHandlers(div);
+      refreshGroupControls();
+    }
+
+    function addDragAndDropHandlers(div) {
+      div.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/plain", "");
+        div.classList.add("dragging");
+      });
+      div.addEventListener("dragend", () => div.classList.remove("dragging"));
+      div.addEventListener("dragover", e => {
+        e.preventDefault();
+        const container = document.getElementById("groupContainer");
+        const dragging = document.querySelector(".dragging");
+        const afterElement = getDragAfterElement(container, e.clientY);
+        if (afterElement == null) container.appendChild(dragging);
+        else container.insertBefore(dragging, afterElement);
+      });
+      div.addEventListener("drop", () => {
+        refreshGroupControls();
+        updateChart();
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll(".groupRow:not(.dragging)")];
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) return { offset, element: child };
+        else return closest;
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function refreshGroupControls() {
+      document.querySelectorAll(".groupControls").forEach(el => el.remove());
+      const container = document.getElementById("groupContainer");
+      const groups = container.querySelectorAll(".groupRow");
+      if (!groups.length) return;
+
+      const controlDiv = document.createElement("div");
+      controlDiv.className = "groupControls";
+
+      const addBtn = document.createElement("button");
+      addBtn.textContent = "+ Add Group";
+      addBtn.onclick = () => {
+        if (groups.length < 10) addGroupSelector();
+        updateChart();
+      };
+      controlDiv.appendChild(addBtn);
+
+      if (groups.length > 1) {
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "− Remove Group";
+        removeBtn.onclick = () => {
+          if (groups.length > 1) {
+            container.removeChild(container.lastElementChild);
+            refreshGroupControls();
+            updateChart();
+          }
+        };
+        controlDiv.appendChild(removeBtn);
+      }
+
+      container.appendChild(controlDiv);
+    }
+
+    function getSelectedGroups() {
+      return [...document.querySelectorAll("#groupContainer select")]
+        .map(s => s.value)
+        .filter(Boolean);
+    }
+
+    function updateChart() {
+      const pollutant = document.getElementById("pollutantSelect").value;
+      const startYear = +document.getElementById("startYear").value;
+      const endYear = +document.getElementById("endYear").value;
+      const groups = getSelectedGroups();
+      if (!pollutant || !startYear || !endYear || !groups.length) return;
+
+      const headers = globalHeaders;
+      const startCol = headers.findIndex(h => h.toLowerCase() === `f${startYear}`);
+      const endCol = headers.findIndex(h => h.toLowerCase() === `f${endYear}`);
+      if (startCol === -1 || endCol === -1) return;
+
+      const chartData = [["Year", ...groups]];
+      const years = headers.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ""));
+      years.forEach((year, i) => {
+        const row = [year];
+        groups.forEach(g => {
+          const dataRow = groupedData[pollutant]?.[g];
+          const val = dataRow ? parseFloat(dataRow[startCol + i]) || 0 : null;
+          row.push(val);
+        });
+        chartData.push(row);
+      });
+
+      const data = google.visualization.arrayToDataTable(chartData);
+      const unit = pollutantUnits[pollutant] || "";
+      const values = chartData.slice(1).flatMap(r => r.slice(1).filter(v => v != null));
+      const maxVal = Math.max(...values);
+      const upperLimit = maxVal > 0 ? maxVal * 1.05 : 1;
+
+      const seenCategories = {};
+      const colors = groups.map((g, i) => {
+        const cat = g.split(" ")[0].toLowerCase();
+        const idx = seenCategories[cat] = (seenCategories[cat] || 0) + 1;
+        return getColorForGroup(g, idx);
+      });
+
+      const options = {
+        title: `${pollutant}${unit ? " (" + unit + ")" : ""}`,
+        colors,
+        legend: { position: "bottom" },
+        hAxis: { title: "Year" },
+        vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0, max: upperLimit } },
+        chartArea: { width: "80%", height: "70%" },
+        pointSize: 4,
+        lineWidth: 3,
+        curveType: "function"
+      };
+
+      const chart = new google.visualization.LineChart(document.getElementById("chart_div"));
+      chart.draw(data, options);
+
+      document.getElementById("downloadBtn").onclick = () => {
+        const link = document.createElement("a");
+        link.href = chart.getImageURI();
+        link.download = `${pollutant}_comparison.png`;
+        link.click();
+      };
+
+      refreshGroupControls();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      google.charts.setOnLoadCallback(init);
+    });
+  </script>
+</head>
+
+<body>
+  <h2>NAEI Multi-Group Pollutant Viewer</h2>
+
+  <label>Pollutant:</label>
+  <select id="pollutantSelect">
+    <option value="">Select pollutant</option>
+  </select>
+
+  <div id="groupContainer"></div>
+
+  <label>Start Year:</label>
+  <select id="startYear"></select>
+  <label>End Year:</label>
+  <select id="endYear"></select>
+
+  <button id="downloadBtn">⬇️ Download Chart as PNG</button>
+
+  <div id="chart_div"></div>
+</body>
+</html>
