@@ -253,7 +253,7 @@
       const unit = pollutantUnits[pollutant] || "";
       const values = chartData.slice(1).flatMap(r => r.slice(1).filter(v => v != null));
       const maxVal = Math.max(...values);
-      const upperLimit = maxVal > 0 ? maxVal * 1.05 : 1;
+	  const upperLimit = maxVal > 0 ? maxVal * 1.15 : 1;
 
       const seenCategories = {};
       const colors = groups.map((g, i) => {
@@ -267,7 +267,11 @@
         colors,
         legend: { position: "bottom" },
         hAxis: { title: "Year" },
-        vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0, max: upperLimit } },
+		vAxis: {
+		    title: `Emissions${unit ? " (" + unit + ")" : ""}`,
+		    viewWindow: { min: 0, max: upperLimit },
+		    minorGridlines: { count: 4 }
+		},
         chartArea: { width: "80%", height: "70%" },
         pointSize: 4,
         lineWidth: 3,
