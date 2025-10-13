@@ -103,9 +103,13 @@
     }
 
     function setupSelectors() {
-      const pollutants = [...new Set(globalRows.map(r => r[1]))];
-      const select = document.getElementById("pollutantSelect");
-      pollutants.forEach(p => select.add(new Option(p, p)));
+
+	const pollutants = [...new Set(globalRows.map(r => r[1]))].sort((a, b) =>
+	  a.localeCompare(b)
+	);
+	const select = document.getElementById("pollutantSelect");
+	pollutants.forEach(p => select.add(new Option(p, p)));
+
 
       const headers = globalHeaders.slice(2);
       const years = headers.map(h => h.replace(/^f/, ""));
@@ -131,8 +135,11 @@
 
       const groupSelect = document.createElement("select");
       groupSelect.innerHTML = '<option value="">Select group</option>';
-      const allGroups = [...new Set(globalRows.map(r => r[0]))];
-      allGroups.forEach(g => groupSelect.add(new Option(g, g)));
+  const allGroups = [...new Set(globalRows.map(r => r[0]))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  allGroups.forEach(g => groupSelect.add(new Option(g, g)));
+
       if (defaultValue) groupSelect.value = defaultValue;
       groupSelect.addEventListener("change", updateChart);
 
