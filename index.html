@@ -188,8 +188,14 @@
         <li>A footer row with the download timestamp</li>
       </ul>
     </p>
-
-    <h3 class="font-semibold text-blue-700">8️⃣ Licensing and Attribution</h3>
+<h3 class="font-semibold text-blue-700">8️⃣ View Group Details</h3>
+<p>
+  Use the <strong>“📘 See Group Info”</strong> section below the group selector to view details of how each group is built.<br>
+  This table shows the <strong>Source Names</strong> and <strong>Fuel Types</strong>, from the NAEI data, that have been combined to create each group.<br>
+  If a group includes all sources or all fuel types, these will be shown as <em>“All Sources”</em> or <em>“All Fuel Types”</em> respectively.
+</p>
+	
+    <h3 class="font-semibold text-blue-700">9️⃣ Licensing and Attribution</h3>
     <p>
       © Crown copyright (Defra & DESNZ) and available under the
       <strong>Open Government Licence (OGL)</strong>.<br>
@@ -204,6 +210,16 @@
     </div>
 
     <div id="groupContainer"></div>
+
+<details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
+  <summary class="cursor-pointer text-lg font-semibold text-blue-700 hover:text-blue-900">
+    📘 See Group Info
+  </summary>
+
+  <div id="group-info" class="mt-3 text-gray-800 leading-relaxed overflow-x-auto">
+    <p>Loading group information...</p>
+  </div>
+</details>
 
     <div>
       <label for="startYear">Start Year:</label>
@@ -386,14 +402,14 @@ function refreshGroupDropdowns(){
 
 function refreshButtons() {
   const container = document.getElementById('groupContainer');
-  // remove existing add / remove buttons so we can rebuild
+  // Remove any existing Add/Remove buttons to rebuild cleanly
   container.querySelectorAll('.add-btn, .remove-btn').forEach(n => n.remove());
 
   const rows = container.querySelectorAll('.groupRow');
 
   // Add remove buttons only if there are 2 or more groups
   if (rows.length >= 2) {
-    rows.forEach((row) => {
+    rows.forEach(row => {
       if (!row.querySelector('.remove-btn')) {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
@@ -409,18 +425,24 @@ function refreshButtons() {
     });
   }
 
-  // Add the "Add Group" button at the end
-  const addBtn = document.createElement('button');
-  addBtn.className = 'add-btn';
-  addBtn.innerHTML = '<span class="add-icon">+</span> Add Group';
-  addBtn.onclick = () => addGroupSelector("", true);
+  // Add "Add Group" button just below the last group box
+  let addBtn = container.querySelector('.add-btn');
+  if (!addBtn) {
+    addBtn = document.createElement('button');
+    addBtn.className = 'add-btn';
+    addBtn.innerHTML = '<span class="add-icon">+</span> Add Group';
+    addBtn.onclick = () => addGroupSelector("", true);
+    container.appendChild(addBtn);
+  }
 
+  // Disable button if 10 groups are present
   if (rows.length >= 10) {
     addBtn.textContent = 'Max Groups = 10';
     addBtn.disabled = true;
+  } else {
+    addBtn.innerHTML = '<span class="add-icon">+</span> Add Group';
+    addBtn.disabled = false;
   }
-
-  container.appendChild(addBtn);
 }
 
 /* ---------------- Drag and drop handlers ---------------- */
@@ -843,7 +865,164 @@ function exportData(format = 'csv') {
     XLSX.writeFile(wb, `${safePollutant}_data.xlsx`);
   }
 }
+// --- Load and display Group Info from CSV file ---
+async function loadGroupInfo() {
+  try {
+	const response = await fetch('Groups-NAEI_mulitgroup_viewer.csv?cacheBust=' + Date.now());
+	
+    if (!response.ok) throw new Error('Failed to fetch CSV file');
 
+    const text = await response.text();
+    const lines = text.trim().split(/\r?\n/);
+    const headers = lines.shift().split(',').map(h => h.trim().toLowerCase());
+
+    const titleIdx = headers.findIndex(h => h.includes('group_title'));
+    const sourceIdx = headers.findIndex(h => h.includes('source'));
+    const activityIdx = headers.findIndex(h => h.includes('activity'));
+    if (titleIdx === -1 || sourceIdx === -1 || activityIdx === -1)
+      throw new Error('CSV missing required columns');
+
+    const groups = lines.map(line => {
+      const cells = line.split(',').map(c => c.trim());
+      return {
+        name: cells[titleIdx] || "",
+        sources: (cells[sourceIdx] || "").split(';').map(s => s.trim()).filter(Boolean),
+        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean)
+      };
+    }).filter(g => g.name);
+
+    groups.sort((a, b) => {
+      if (a.name.toLowerCase() === "all") return -1;
+      if (b.name.toLowerCase() === "all") return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    // Build HTML with fixed header + scrollable body
+    let html = `
+  <style>
+    #group-info {
+      max-height: 70vh;
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      transition: opacity 0.35s ease-in-out;
+      border-left: 2px solid #444;
+      border-right: 2px solid #444;
+      border-bottom: 2px solid #444;
+      border-top: 2px solid #444;
+      background: #fff;
+    }
+    #group-info.visible {
+      opacity: 1;
+    }
+
+    /* wrapper table stays full width; no separate scroll on header */
+    #group-info table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+      table-layout: fixed;
+      box-sizing: border-box;
+    }
+
+    #group-info thead th,
+    #group-info td {
+      border: 1px solid #444;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+      box-sizing: border-box;
+    }
+
+    #group-info thead th {
+      background-color: #d0d0d0;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    #group-info tbody {
+      display: block;
+      max-height: 65vh;
+      overflow-y: auto;
+      overflow-x: hidden; /* fully disables sideways scroll */
+    }
+
+    #group-info thead,
+    #group-info tbody tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    #group-info tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+    #group-info tr:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+ 
+
+      <table id="groupTable">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Group Name</th>
+            <th style="width: 40%;">Source Names</th>
+            <th style="width: 35%;">Fuel Types (Activity in NAEI data)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+	groups.forEach(g => {
+	  const sourcesText = g.sources.length ? g.sources.join('\n') : 'All Sources';
+	  const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
+
+	  html += `
+	    <tr>
+	      <td>${g.name}</td>
+	      <td style="white-space: pre-line;">${sourcesText}</td>
+	      <td style="white-space: pre-line;">${activitiesText}</td>
+	    </tr>
+	  `;
+	});
+ 
+
+    html += "</tbody></table>";
+    const container = document.getElementById('group-info');
+    container.innerHTML = html;
+
+    // --- Align header and body columns after render ---
+    const alignColumns = () => {
+      const table = document.getElementById('groupTable');
+      const headCells = table.querySelectorAll('thead th');
+      const bodyCells = table.querySelector('tbody tr:first-child')?.children;
+      if (!headCells.length || !bodyCells) return;
+
+      headCells.forEach((th, i) => {
+        const width = bodyCells[i]?.offsetWidth || th.offsetWidth;
+        th.style.width = width + 'px';
+      });
+      container.classList.add('visible');
+    };
+
+    // Delay a bit to ensure full rendering before aligning
+    requestAnimationFrame(() => setTimeout(alignColumns, 100));
+
+    // Also re-align on window resize
+    window.addEventListener('resize', alignColumns);
+
+  } catch (err) {
+    console.error("Error loading group info:", err);
+    document.getElementById('group-info').innerHTML =
+      "<p class='text-red-600'>⚠️ Could not load group information. Please check the CSV file.</p>";
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadGroupInfo);
 
 document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
 </script>
