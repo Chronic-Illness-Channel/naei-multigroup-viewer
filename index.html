@@ -360,27 +360,39 @@ function updateChart(){
   const endCol = headers.findIndex(h => h && h.toLowerCase() === `f${endYear}`);
   if (startCol === -1 || endCol === -1 || endCol < startCol) return;
   const years = headers.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ''));
-  const chartCols = ['Year'];
-  const chartRows = years.map(y => [y]);
   const colors = groups.map(g => getColorForGroup(g));
 
-  groups.forEach(g => {
-    const dataRow = groupedData[pollutant]?.[g];
-    chartCols.push(g);
-    years.forEach((yr, idx) => {
-      const raw = dataRow ? dataRow[startCol + idx] : null;
+  // Build rows of data (year + series values). Use null for missing.
+  const chartRows = years.map((y, rowIdx) => {
+    const row = [y];
+    groups.forEach(g => {
+      const dataRow = groupedData[pollutant]?.[g];
+      const raw = dataRow ? dataRow[startCol + rowIdx] : null;
       const val = (raw === null || raw === undefined) ? null : parseFloat(raw);
-      chartRows[idx].push(Number.isNaN(val) ? null : val);
+      row.push(Number.isNaN(val) ? null : val);
     });
+    return row;
   });
 
   // guard against empty data
   if (chartRows.length === 0) return;
 
-  const dataTable = google.visualization.arrayToDataTable([chartCols, ...chartRows]);
+  // --- Determine which groups actually have data ---
+  const groupHasData = groups.map((g, i) => {
+    return chartRows.some(row => typeof row[i + 1] === 'number');
+  });
+
+  // Create DataTable explicitly to guarantee column types
+  const dataTable = new google.visualization.DataTable();
+  dataTable.addColumn('string', 'Year');           // year as string
+  groups.forEach(g => dataTable.addColumn('number', g)); // explicit numeric series columns
+  dataTable.addRows(chartRows);
+
   const unit = pollutantUnits[pollutant] || "";
   const seriesOptions = {};
-  groups.forEach((g, i) => seriesOptions[i] = { color: colors[i], lineWidth: 3, pointSize: 4 });
+  groups.forEach((g, i) => {
+    seriesOptions[i] = { color: colors[i], lineWidth: 3, pointSize: 4 };
+  });
 
   const options = {
     title: '',
@@ -417,16 +429,31 @@ function updateChart(){
     dot.style.borderRadius = '50%';
     dot.style.backgroundColor = colors[i];
     item.appendChild(dot);
-    item.appendChild(document.createTextNode(g));
-    item.addEventListener('click', () => {
-      seriesVisibility[i] = !seriesVisibility[i];
-      const newOptions = { ...options, series: {} };
-      groups.forEach((g2, idx) => {
-        newOptions.series[idx] = seriesVisibility[idx] ? { color: colors[idx], lineWidth: 3, pointSize: 4 } : { color: colors[idx], lineWidth: 0, pointSize: 0 };
+
+    const labelText = document.createTextNode(g + (groupHasData[i] ? '' : ' (No data available)'));
+    item.appendChild(labelText);
+
+    // Fade if no data
+    if (!groupHasData[i]) {
+      item.style.opacity = '0.4';
+      item.title = 'No data available';
+    }
+
+    // Toggle visibility only if data exists
+    if (groupHasData[i]) {
+      item.addEventListener('click', () => {
+        seriesVisibility[i] = !seriesVisibility[i];
+        const newOptions = { ...options, series: {} };
+        groups.forEach((g2, idx) => {
+          newOptions.series[idx] = seriesVisibility[idx]
+            ? { color: colors[idx], lineWidth: 3, pointSize: 4 }
+            : { color: colors[idx], lineWidth: 0, pointSize: 0 };
+        });
+        chart.draw(dataTable, newOptions);
+        item.style.opacity = seriesVisibility[i] ? '1' : '0.4';
       });
-      chart.draw(dataTable, newOptions);
-      item.style.opacity = seriesVisibility[i] ? '1' : '0.4';
-    });
+    }
+
     legendDiv.appendChild(item);
   });
 
@@ -524,17 +551,20 @@ function setupDownloadButton() {
 
       rowItems.forEach(({ row, rowW }) => {
         let x = (unscaledWidth - rowW) / 2;
-        row.forEach(({ dotColor, text }) => {
-          ctx.beginPath();
-          ctx.arc(x + 6, legendY - 5, 6, 0, 2 * Math.PI);
-          ctx.fillStyle = dotColor;
-          ctx.fill();
-          ctx.font = '600 14px system-ui, sans-serif';
-          ctx.fillStyle = '#000000';
-          ctx.textAlign = 'left';
-          ctx.fillText(text, x + 18, legendY);
-          x += ctx.measureText(text).width + 40;
-        });
+		row.forEach(({ dotColor, text }) => {
+		  const faded = text.includes('(No data available)');
+		  ctx.globalAlpha = faded ? 0.4 : 1.0;
+		  ctx.beginPath();
+		  ctx.arc(x + 6, legendY - 5, 6, 0, 2 * Math.PI);
+		  ctx.fillStyle = dotColor;
+		  ctx.fill();
+		  ctx.font = '600 14px system-ui, sans-serif';
+		  ctx.fillStyle = '#000000';
+		  ctx.textAlign = 'left';
+		  ctx.fillText(text, x + 18, legendY);
+		  ctx.globalAlpha = 1.0;
+		  x += ctx.measureText(text).width + 40;
+		});
         legendY += legendRowHeight;
       });
 
