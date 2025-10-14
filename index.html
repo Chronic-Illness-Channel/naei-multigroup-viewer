@@ -5,53 +5,43 @@
   <title>NAEI Multi-Group Pollutant Viewer</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://www.gstatic.com/charts/loader.js"></script>
-
   <style>
     body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; }
     label { font-weight:600; margin-right:6px; }
+	#cicLogo {
+	  position: absolute;
+	  top: 10px;
+	  right: 10px;
+	  width: 80px; /* adjust size if needed */
+	  height: auto;
+	  z-index: 100;
+	}
+	
     select, button { margin:6px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
     h2 { margin-bottom:8px; }
-
     #groupContainer { margin-top:10px; }
     .groupRow { display:flex; align-items:center; gap:8px; margin:4px 0; }
     .groupRow.dragging { opacity:0.5; }
-
-    /* Chart is hidden until fully drawn at correct size */
-    #chart_div { width:100%; height:70vh; margin-top:20px; opacity:0; transition:opacity .35s ease; min-height:60vh; }
+    .dragHandle { cursor:grab; user-select:none; padding:4px 6px; background:#f0f0f0; border-radius:6px; }
+    #chartTitle { font-weight:700; font-size:18px; margin-top:8px; margin-bottom:6px; text-align:center; }
+    #chart_div { width:100%; height:60vh; margin-top:0; opacity:0; transition:opacity .35s ease; min-height:40vh; border:1px solid #eee; border-radius:6px; padding:6px; box-sizing:border-box; }
     #chart_div.visible { opacity:1; }
-
     button { background:#EFEFEF; cursor:pointer; }
     button:hover { background:#E0E0E0; }
     button:disabled { background:#EEE; color:#666; cursor:not-allowed; }
-
     .add-btn, .remove-btn { display:inline-flex; align-items:center; gap:6px; }
     .remove-icon { display:inline-block; width:18px; height:18px; border-radius:50%; background:#d33; color:#fff; text-align:center; line-height:18px; font-weight:bold; }
-
-	.add-btn .add-icon {
-	  color: #4CAF50;
-	  font-weight: bold;
-	  font-size: 2em;
-	}
-	.add-btn:hover .add-icon {
-	  color: #45a049;
-	}
-
-    /* Loader overlay + pie spinner */
-    #loadingOverlay {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      background: rgba(255,255,255,0.98); z-index:9999; transition:opacity .35s ease;
-    }
-    .spinner {
-      width:96px; height:96px; border-radius:50%;
-      background: conic-gradient(#E6194B 0deg 120deg, #F58231 120deg 240deg, #FFE119 240deg 360deg);
-      animation: spin 1.25s linear infinite; box-shadow:0 0 12px rgba(0,0,0,0.08);
-    }
+    .add-btn .add-icon { color:#4CAF50; font-weight:bold; font-size:1.25em; }
+    .add-btn:hover .add-icon { color:#45a049; }
+    #loadingOverlay { position:fixed; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(255,255,255,0.98); z-index:9999; transition:opacity .35s ease; }
+    .spinner { width:72px; height:72px; border-radius:50%; background: conic-gradient(#E6194B 0deg 120deg,#F58231 120deg 240deg,#FFE119 240deg 360deg); animation:spin 1.25s linear infinite; box-shadow:0 0 12px rgba(0,0,0,0.08); }
     @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
     .loading-text { margin-top:12px; color:#333; font-weight:600; }
-
     #mainContent { display:none; opacity:0; transition:opacity .4s ease; }
     #mainContent.loaded { opacity:1; }
+    #customLegend { margin-top:10px; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; font-family:system-ui,sans-serif; }
+    #customLegend span { user-select:none; margin-right:12px; margin-bottom:6px; font-weight:600; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+	footer { margin-top: 20px; text-align: center; font-size: 12px; color: #555; line-height:1.4; }
   </style>
 </head>
 
@@ -61,386 +51,502 @@
     <div class="loading-text">Loading data, please wait…</div>
   </div>
 
+<img id="cicLogo" src="CIC - Square - Border - Words - Alpha 360x360.png" alt="CIC Logo">
+
+
   <div id="mainContent" aria-hidden="true">
     <h2>NAEI Multi-Group Pollutant Viewer</h2>
 
     <div>
       <label for="pollutantSelect">Pollutant:</label>
-      <select id="pollutantSelect" name="pollutantSelect"><option value="">Select pollutant</option></select>
+      <select id="pollutantSelect"><option value="">Select pollutant</option></select>
     </div>
 
     <div id="groupContainer"></div>
 
     <div>
       <label for="startYear">Start Year:</label>
-      <select id="startYear" name="startYear"></select>
+      <select id="startYear"></select>
 
       <label for="endYear">End Year:</label>
-      <select id="endYear" name="endYear"></select>
+      <select id="endYear"></select>
 
       <button id="downloadBtn">⬇️ Download Chart as PNG</button>
     </div>
 
+    <div id="chartTitle" aria-hidden="true"></div>
+    <div id="customLegend" aria-hidden="true"></div>
     <div id="chart_div" role="img" aria-label="Pollutant time series chart"></div>
+<footer>
+  © Crown 2025 copyright Defra &amp; DESNZ via 
+  <a href="https://naei.energysecurity.gov.uk" target="_blank" rel="noopener">naei.energysecurity.gov.uk</a> 
+  licensed under the Open Government Licence (OGL).<br>
+  <a href="http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener">
+    http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  </a>
+</footer>
+
   </div>
 
-  <script>
-    // Load Google Charts
-    google.charts.load('current', { packages: ['corechart'] });
+<script>
+google.charts.load('current', {packages:['corechart']});
 
-    // JSON (gviz/tq) endpoints — your original working URLs
-    const DATA_SHEET_URL =
-      'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=23ds_group_data&tq=SELECT%20*';
-    const UNIT_SHEET_URL =
-      'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=Pollutant&tq=SELECT%20*';
+// Data URLs (your gviz endpoints)
+const DATA_SHEET_URL='https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=23ds_group_data&tq=SELECT%20*';
+const UNIT_SHEET_URL='https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=Pollutant&tq=SELECT%20*';
 
-    let globalRows = [];
-    let globalHeaders = [];
-    let pollutantUnits = {};
-    let groupedData = {};
+let globalRows=[], globalHeaders=[], pollutantUnits={}, groupedData={};
+const distinctPalette=['#E6194B','#3CB44B','#FFE119','#4363D8','#F58231','#911EB4','#46F0F0','#F032E6','#BCF60C','#FABEBE'];
+const categoryBaseColor={ecodesign:distinctPalette[4],fireplace:distinctPalette[0],gas:distinctPalette[3],power:distinctPalette[1],road:distinctPalette[6]};
+let colorCache={}, availableColors=[...distinctPalette];
+let chart; // global chart instance
 
-    // -----------------------
-    // Stable colour system
-    // -----------------------
-    const distinctPalette = [
-      '#E6194B','#3CB44B','#FFE119','#4363D8','#F58231',
-      '#911EB4','#46F0F0','#F032E6','#BCF60C','#FABEBE'
-    ];
+/* ---------------- Color helpers ---------------- */
+function resetColorSystem(){ colorCache={}; availableColors=[...distinctPalette]; }
+function getColorForGroup(name){
+  if(!name) return '#888888';
+  if(colorCache[name]) return colorCache[name];
+  const lower = name.toLowerCase();
+  const cat = Object.keys(categoryBaseColor).find(c => lower.includes(c));
+  let col = cat && availableColors.includes(categoryBaseColor[cat]) ? categoryBaseColor[cat] : availableColors.shift() || '#888888';
+  colorCache[name] = col;
+  return col;
+}
 
-    // Preferred base colours for categories (kept if available)
-    const categoryBaseColor = {
-      ecodesign: distinctPalette[4], // orange
-      fireplace: distinctPalette[0], // red
-      gas: distinctPalette[3],       // blue
-      power: distinctPalette[1],     // green
-      road: distinctPalette[6]       // cyan
+/* ---------------- Data fetching ---------------- */
+async function fetchGVizData(url){
+  const res = await fetch(url);
+  const txt = await res.text();
+  if (!txt.includes('{')) throw new Error('Unexpected sheet response');
+  // gviz returns something like: /*O_o*/ google.visualization.Query.setResponse({...});
+  return JSON.parse(txt.substring(txt.indexOf('{'), txt.lastIndexOf('}')+1));
+}
+
+async function loadUnits(){
+  const j = await fetchGVizData(UNIT_SHEET_URL);
+  if (!j.table || !j.table.rows) return;
+  j.table.rows.forEach(r => {
+    const cells = r.c.map(c => c ? c.v : null);
+    if (cells[0] && cells[1]) pollutantUnits[cells[0]] = cells[1];
+  });
+}
+
+async function loadData(){
+  const j = await fetchGVizData(DATA_SHEET_URL);
+  if (!j.table || !j.table.rows || !j.table.cols) throw new Error('Unexpected sheet structure');
+  const headers = j.table.cols.map(c => c.label);
+  const rows = j.table.rows.map(r => r.c.map(c => c ? c.v : null));
+  globalHeaders = headers; globalRows = rows; groupedData = {};
+  rows.forEach(row => {
+    const group = row[0], pollutant = row[1];
+    if (!group || !pollutant) return;
+    if (!groupedData[pollutant]) groupedData[pollutant] = {};
+    groupedData[pollutant][group] = row;
+  });
+}
+
+/* ---------------- UI: selectors & group controls ---------------- */
+function setupSelectors(){
+  const pollutants = [...new Set(globalRows.map(r => r[1]).filter(Boolean))].sort();
+  const sel = document.getElementById('pollutantSelect');
+  sel.innerHTML = '<option value="">Select pollutant</option>';
+  pollutants.forEach(p => sel.add(new Option(p, p)));
+
+  const years = globalHeaders.slice(2).map(h => h ? h.replace(/^f/, '') : '');
+  const s = document.getElementById('startYear'), e = document.getElementById('endYear');
+  s.innerHTML = ''; e.innerHTML = '';
+  years.forEach(y => { if(y) { s.add(new Option(y,y)); e.add(new Option(y,y)); } });
+  s.value = years[0] || '';
+  e.value = years[years.length-1] || '';
+
+  sel.addEventListener('change', () => updateChart());
+  s.addEventListener('change', () => updateChart());
+  e.addEventListener('change', () => updateChart());
+}
+
+function getSelectedGroups(){ return [...document.querySelectorAll('#groupContainer select')].map(s => s.value).filter(Boolean); }
+
+function addGroupSelector(defaultValue = "", usePlaceholder = true){
+  const container = document.getElementById('groupContainer');
+  const div = document.createElement('div');
+  div.className = 'groupRow';
+  div.draggable = true;
+
+  // drag handle
+  const dragHandle = document.createElement('span');
+  dragHandle.className = 'dragHandle';
+  dragHandle.textContent = '⠿';
+  dragHandle.style.marginRight = '6px';
+  div.appendChild(dragHandle);
+
+  // group select
+  const sel = document.createElement('select');
+  if (usePlaceholder){
+    const ph = new Option('Select group','');
+    ph.disabled = true; ph.selected = true;
+    sel.add(ph);
+  }
+  const allGroups = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const selected = getSelectedGroups();
+  allGroups.forEach(g => {
+    if (!selected.includes(g) || g === defaultValue) sel.add(new Option(g,g));
+  });
+  if (defaultValue) sel.value = defaultValue;
+  sel.addEventListener('change', () => { refreshGroupDropdowns(); updateChart(); });
+
+  div.appendChild(sel);
+
+  container.appendChild(div);
+  addDragAndDropHandlers(div);
+  refreshButtons();
+}
+
+function refreshGroupDropdowns(){
+  const selected = getSelectedGroups();
+  const all = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort();
+  document.querySelectorAll('#groupContainer select').forEach(select => {
+    const current = select.value;
+    Array.from(select.options).forEach(opt => { if (opt.value !== '') opt.remove(); });
+    all.forEach(g => {
+      if (!selected.includes(g) || g === current) {
+        const option = new Option(g,g);
+        if (g === current) option.selected = true;
+        select.add(option);
+      }
+    });
+  });
+}
+
+function refreshButtons(){
+  const container = document.getElementById('groupContainer');
+  // remove existing add / remove buttons so we can rebuild
+  container.querySelectorAll('.add-btn, .remove-btn').forEach(n => n.remove());
+
+  const rows = container.querySelectorAll('.groupRow');
+  // add remove buttons to each row (if more than 0)
+  if (rows.length > 0){
+    rows.forEach((row, idx) => {
+      if (!row.querySelector('.remove-btn')){
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '<span class="remove-icon">−</span> Remove Group';
+        removeBtn.onclick = () => {
+          row.remove();
+          refreshButtons();
+          refreshGroupDropdowns();
+          updateChart();
+        };
+        row.appendChild(removeBtn);
+      }
+    });
+  }
+
+  // add the "Add Group" button at the end
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.innerHTML = '<span class="add-icon">+</span> Add Group';
+  addBtn.onclick = () => addGroupSelector("", true);
+  if (rows.length >= 10) { addBtn.textContent = 'Max Groups = 10'; addBtn.disabled = true; }
+  container.appendChild(addBtn);
+}
+
+/* ---------------- Drag and drop handlers ---------------- */
+function addDragAndDropHandlers(div){
+  div.addEventListener('dragstart', e => {
+    e.dataTransfer.setData('text/plain', '');
+    div.classList.add('dragging');
+  });
+  div.addEventListener('dragend', () => div.classList.remove('dragging'));
+  div.addEventListener('dragover', e => {
+    e.preventDefault();
+    const container = document.getElementById('groupContainer');
+    const dragging = container.querySelector('.dragging');
+    if (!dragging) return;
+    const after = getDragAfterElement(container, e.clientY);
+    const addBtn = container.querySelector('.add-btn');
+    if (!after || after === addBtn) container.insertBefore(dragging, addBtn);
+    else container.insertBefore(dragging, after);
+  });
+  div.addEventListener('drop', () => { refreshGroupDropdowns(); updateChart(); });
+}
+
+function getDragAfterElement(container, y){
+  const draggable = [...container.querySelectorAll('.groupRow:not(.dragging)')];
+  return draggable.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+    return closest;
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+/* ---------------- Chart rendering & legend ---------------- */
+function updateChart(){
+  const pollutant = document.getElementById('pollutantSelect').value;
+  const startYear = +document.getElementById('startYear').value;
+  const endYear = +document.getElementById('endYear').value;
+  const groups = getSelectedGroups();
+  if (!pollutant || !startYear || !endYear || !groups.length) return;
+
+  resetColorSystem();
+  const headers = globalHeaders;
+  const startCol = headers.findIndex(h => h && h.toLowerCase() === `f${startYear}`);
+  const endCol = headers.findIndex(h => h && h.toLowerCase() === `f${endYear}`);
+  if (startCol === -1 || endCol === -1 || endCol < startCol) return;
+  const years = headers.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ''));
+  const chartCols = ['Year'];
+  const chartRows = years.map(y => [y]);
+  const colors = groups.map(g => getColorForGroup(g));
+
+  groups.forEach(g => {
+    const dataRow = groupedData[pollutant]?.[g];
+    chartCols.push(g);
+    years.forEach((yr, idx) => {
+      const raw = dataRow ? dataRow[startCol + idx] : null;
+      const val = (raw === null || raw === undefined) ? null : parseFloat(raw);
+      chartRows[idx].push(Number.isNaN(val) ? null : val);
+    });
+  });
+
+  // guard against empty data
+  if (chartRows.length === 0) return;
+
+  const dataTable = google.visualization.arrayToDataTable([chartCols, ...chartRows]);
+  const unit = pollutantUnits[pollutant] || "";
+  const seriesOptions = {};
+  groups.forEach((g, i) => seriesOptions[i] = { color: colors[i], lineWidth: 3, pointSize: 4 });
+
+  const options = {
+    title: '',
+    width: '100%',
+    height: '70%',
+    legend: 'none',
+    hAxis: { title: 'Year' },
+    vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0 } },
+    series: seriesOptions,
+    curveType: 'function',
+    chartArea: { top: 20, left: 60, right: 20, bottom: 60 }
+  };
+
+  // draw chart and show pollutant as visible page title
+  chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+  chart.draw(dataTable, options);
+  document.getElementById('chart_div').classList.add('visible');
+
+  // update visible title on page
+  const titleEl = document.getElementById('chartTitle');
+  titleEl.textContent = `${pollutant}${unit ? " (" + unit + ")" : ""}`;
+
+  // build custom legend (interactive)
+  const legendDiv = document.getElementById('customLegend');
+  legendDiv.innerHTML = '';
+  const seriesVisibility = Array(groups.length).fill(true);
+
+  groups.forEach((g, i) => {
+    const item = document.createElement('span');
+    const dot = document.createElement('span');
+    dot.style.display = 'inline-block';
+    dot.style.width = '12px';
+    dot.style.height = '12px';
+    dot.style.borderRadius = '50%';
+    dot.style.backgroundColor = colors[i];
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(g));
+    item.addEventListener('click', () => {
+      seriesVisibility[i] = !seriesVisibility[i];
+      const newOptions = { ...options, series: {} };
+      groups.forEach((g2, idx) => {
+        newOptions.series[idx] = seriesVisibility[idx] ? { color: colors[idx], lineWidth: 3, pointSize: 4 } : { color: colors[idx], lineWidth: 0, pointSize: 0 };
+      });
+      chart.draw(dataTable, newOptions);
+      item.style.opacity = seriesVisibility[i] ? '1' : '0.4';
+    });
+    legendDiv.appendChild(item);
+  });
+
+  // ensure controls reflect available choices
+  refreshGroupDropdowns();
+  refreshButtons();
+}
+
+function setupDownloadButton() {
+  const dl = document.getElementById('downloadBtn');
+
+  dl.addEventListener('click', () => {
+    const pollutant = document.getElementById('pollutantSelect').value;
+    if (!chart || !pollutant) return;
+
+    const unit = pollutantUnits[pollutant] || "";
+    const imageURI = chart.getImageURI();
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      // --- Measure legend for layout ---
+      const legendClone = document.getElementById('customLegend').cloneNode(true);
+      legendClone.style.position = 'absolute';
+      legendClone.style.visibility = 'hidden';
+      legendClone.style.width = Math.min(800, img.width) + 'px';
+      document.body.appendChild(legendClone);
+      const legendHeight = legendClone.offsetHeight + 10;
+      document.body.removeChild(legendClone);
+
+      const titleHeight = 30;
+      const footerHeight = 40;
+      const padding = 20;
+
+      // --- Determine output size ---
+      const unscaledWidth = img.width + padding * 2;
+      const unscaledHeight =
+        img.height + titleHeight + legendHeight + footerHeight + padding * 3;
+
+      // --- Auto-scale for print quality ---
+      // For A4 landscape at 300 DPI: 3508 px wide
+      const targetWidth = 3508;
+      const scale = Math.max(
+        window.devicePixelRatio || 1,
+        targetWidth / unscaledWidth
+      );
+
+      const canvas = document.createElement('canvas');
+      canvas.width = unscaledWidth * scale;
+      canvas.height = unscaledHeight * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      // --- Background ---
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, unscaledWidth, unscaledHeight);
+
+      // --- Title ---
+      ctx.font = 'bold 18px system-ui, sans-serif';
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        `${pollutant}${unit ? " (" + unit + ")" : ""}`,
+        unscaledWidth / 2,
+        padding + 15
+      );
+
+      // --- Legend ---
+      const legendDiv = document.getElementById('customLegend');
+      const items = [...legendDiv.querySelectorAll('span')];
+      let legendY = padding + 35;
+      const legendRowHeight = 22;
+      const maxW = unscaledWidth - padding * 2;
+      const rowItems = [];
+      let row = [],
+        rowW = 0;
+
+      items.forEach((it) => {
+        const dot = it.querySelector('span');
+        if (!dot) return;
+        const text = it.textContent.trim();
+        ctx.font = '600 14px system-ui, sans-serif';
+        const textW = ctx.measureText(text).width;
+        const w = textW + 40;
+        if (rowW + w > maxW && row.length) {
+          rowItems.push({ row, rowW });
+          row = [];
+          rowW = 0;
+        }
+        row.push({ dotColor: dot.style.backgroundColor, text });
+        rowW += w;
+      });
+
+      if (row.length) rowItems.push({ row, rowW });
+
+      rowItems.forEach(({ row, rowW }) => {
+        let x = (unscaledWidth - rowW) / 2;
+        row.forEach(({ dotColor, text }) => {
+          ctx.beginPath();
+          ctx.arc(x + 6, legendY - 5, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = dotColor;
+          ctx.fill();
+          ctx.font = '600 14px system-ui, sans-serif';
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'left';
+          ctx.fillText(text, x + 18, legendY);
+          x += ctx.measureText(text).width + 40;
+        });
+        legendY += legendRowHeight;
+      });
+
+      // --- Chart image ---
+      ctx.drawImage(img, padding, legendY + 10);
+
+      // --- Logo and footer ---
+      const logo = new Image();
+      logo.src = 'CIC - Square - Border - Words - Alpha 360x360.png';
+
+      logo.onload = () => {
+        const logoSize = 80;
+        ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
+
+        const footerText =
+          "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
+        const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
+
+        ctx.font = '12px system-ui, sans-serif';
+        ctx.fillStyle = '#555';
+        ctx.textAlign = 'center';
+        ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
+        ctx.fillText(`Generated ${timestamp}`, unscaledWidth / 2, legendY + img.height + 35);
+
+        // --- Download ---
+        const link = document.createElement('a');
+        const safeName = pollutant.replace(/[^a-z0-9_\-]/gi, '_');
+        link.download = `${safeName}_comparison.png`;
+        link.href = canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      };
     };
 
-    // colourCache: groupName -> hex (stable across redraws)
-    // availableColors: pool of colours not currently assigned
-    let colorCache = {};
-    let availableColors = [...distinctPalette];
+    img.onerror = (e) => {
+      console.error('Failed to load chart image for export', e);
+      alert('Sorry — failed to generate the PNG from the chart image.');
+    };
 
-    function resetColorSystem() {
-      colorCache = {};
-      availableColors = [...distinctPalette];
-    }
+    img.src = imageURI;
+  });
+}
+/* ---------------- Initialization ---------------- */
+async function init(){
+  try {
+    await loadUnits();
+    await loadData();
+  } catch (err) {
+    console.error('Failed loading data:', err);
+    document.getElementById('loadingOverlay').innerHTML = '<div style="color:#900;font-weight:700">Failed to load data — check sheet access.</div>';
+    return;
+  }
 
-    function getColorForGroup(groupName) {
-      if (!groupName) return '#888888';
-      if (colorCache[groupName]) return colorCache[groupName];
+  setupSelectors();
 
-      const lower = groupName.toLowerCase();
-      const category = Object.keys(categoryBaseColor).find(c => lower.includes(c));
-      let color = null;
+  // add one default group selector: prefer the first available group, otherwise placeholder
+  const firstGroup = globalRows.length ? globalRows[0][0] : '';
+  if (firstGroup) addGroupSelector(firstGroup, false);
+  else addGroupSelector('', true);
 
-      // If category has a preferred color and it's free, use it
-      if (category) {
-        const base = categoryBaseColor[category];
-        if (availableColors.includes(base)) {
-          color = base;
-          // remove from pool
-          availableColors = availableColors.filter(c => c !== base);
-        }
-      }
+  setupDownloadButton();
 
-      // Otherwise use next available color
-      if (!color) {
-        color = availableColors.shift() || '#888888';
-      }
+  // default pollutant (if exists)
+  const sel = document.getElementById('pollutantSelect');
+  if (sel.querySelector('option[value="PM2.5"]')) sel.value = 'PM2.5';
 
-      colorCache[groupName] = color;
-      return color;
-    }
+  // show UI
+  const overlay = document.getElementById('loadingOverlay'), content = document.getElementById('mainContent');
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    content.style.display = 'block';
+    setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
+  }, 400);
+}
 
-    // Rebuild color assignments when the active groups list changes:
-    // - try to preserve previous assignment where possible
-    // - free colours that are no longer in use
-    function refreshColorAssignments(groups) {
-      const prevCache = { ...colorCache };
-      resetColorSystem();
-
-      // Reassign previous colours if still applicable and free
-      groups.forEach(g => {
-        if (prevCache[g] && availableColors.includes(prevCache[g])) {
-          colorCache[g] = prevCache[g];
-          availableColors = availableColors.filter(c => c !== prevCache[g]);
-        }
-      });
-
-      // Assign colours for groups without one
-      groups.forEach(g => {
-        if (!colorCache[g]) getColorForGroup(g);
-      });
-    }
-
-    // -----------------------
-    // Fetch Google Visualization JSON
-    // -----------------------
-    async function fetchGVizData(url) {
-      const res = await fetch(url);
-      const text = await res.text();
-      if (!text.startsWith('/*O_o*/')) throw new Error('Sheet not accessible.');
-      // extract JSON object inside the callback
-      return JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1));
-    }
-
-    async function loadUnits() {
-      const json = await fetchGVizData(UNIT_SHEET_URL);
-      json.table.rows.forEach(r => {
-        const cells = r.c.map(c => (c ? c.v : null));
-        if (cells[0] && cells[1]) pollutantUnits[cells[0]] = cells[1];
-      });
-    }
-
-    async function loadData() {
-      const json = await fetchGVizData(DATA_SHEET_URL);
-      const headers = json.table.cols.map(c => c.label);
-      const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : null)));
-      globalHeaders = headers;
-      globalRows = rows;
-      groupedData = {};
-      rows.forEach(row => {
-        const group = row[0];
-        const pollutant = row[1];
-        if (!groupedData[pollutant]) groupedData[pollutant] = {};
-        groupedData[pollutant][group] = row;
-      });
-    }
-
-    // -----------------------
-    // UI setup
-    // -----------------------
-    function setupSelectors() {
-      const pollutants = [...new Set(globalRows.map(r => r[1]))].sort((a,b) => a.localeCompare(b));
-      const select = document.getElementById("pollutantSelect");
-      pollutants.forEach(p => select.add(new Option(p, p)));
-
-      const headers = globalHeaders.slice(2);
-      const years = headers.map(h => h.replace(/^f/, ""));
-      const start = document.getElementById("startYear");
-      const end = document.getElementById("endYear");
-      years.forEach(y => {
-        start.add(new Option(y, y));
-        end.add(new Option(y, y));
-      });
-      start.value = years[0];
-      end.value = years[years.length - 1];
-
-      select.addEventListener("change", updateChart);
-      start.addEventListener("change", updateChart);
-      end.addEventListener("change", updateChart);
-    }
-
-    function addGroupSelector(defaultValue = "") {
-      const container = document.getElementById("groupContainer");
-      const div = document.createElement("div");
-      div.className = "groupRow";
-      div.draggable = true;
-
-      const groupSelect = document.createElement("select");
-      groupSelect.innerHTML = '<option value="">Select group</option>';
-      const allGroups = [...new Set(globalRows.map(r => r[0]))].sort((a,b) => a.localeCompare(b));
-      allGroups.forEach(g => groupSelect.add(new Option(g, g)));
-      if (defaultValue) groupSelect.value = defaultValue;
-      groupSelect.addEventListener("change", updateChart);
-
-      const dragHandle = document.createElement("span");
-      dragHandle.textContent = "⠿";
-      dragHandle.style.cursor = "grab";
-      dragHandle.style.marginRight = "6px";
-
-      div.appendChild(dragHandle);
-      div.appendChild(groupSelect);
-      container.appendChild(div);
-
-      addDragAndDropHandlers(div);
-      refreshButtons();
-    }
-
-    function refreshButtons() {
-      const container = document.getElementById("groupContainer");
-      container.querySelectorAll(".add-btn, .remove-btn").forEach(btn => btn.remove());
-      const groups = container.querySelectorAll(".groupRow");
-
-      if (groups.length > 1) {
-        groups.forEach(div => {
-          if (!div.querySelector(".remove-btn")) {
-            const removeBtn = document.createElement("button");
-            removeBtn.className = "remove-btn";
-            removeBtn.innerHTML = `<span class="remove-icon">−</span> Remove Group`;
-            removeBtn.onclick = () => {
-              div.remove();
-              refreshButtons();
-              updateChart();
-            };
-            div.appendChild(removeBtn);
-          }
-        });
-      }
-
-      const addBtn = document.createElement("button");
-      addBtn.className = "add-btn";
-      addBtn.innerHTML = `<span class="add-icon">+</span> Add Group`;
-      if (groups.length >= 10) {
-        addBtn.textContent = "Max Groups = 10";
-        addBtn.disabled = true;
-      } else {
-        addBtn.onclick = () => addGroupSelector();
-      }
-      container.appendChild(addBtn);
-    }
-
-    function addDragAndDropHandlers(div) {
-      div.addEventListener("dragstart", e => {
-        e.dataTransfer.setData("text/plain", "");
-        div.classList.add("dragging");
-      });
-      div.addEventListener("dragend", () => div.classList.remove("dragging"));
-      div.addEventListener("dragover", e => {
-        e.preventDefault();
-        const container = document.getElementById("groupContainer");
-        const dragging = document.querySelector(".dragging");
-        const after = getDragAfterElement(container, e.clientY);
-        const addBtn = container.querySelector(".add-btn");
-        if (after == null || after === addBtn) container.insertBefore(dragging, addBtn);
-        else container.insertBefore(dragging, after);
-      });
-      div.addEventListener("drop", updateChart);
-    }
-
-    function getDragAfterElement(container, y) {
-      const draggable = [...container.querySelectorAll(".groupRow:not(.dragging)")];
-      return draggable.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) return { offset, element: child };
-        else return closest;
-      }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    function getSelectedGroups() {
-      return [...document.querySelectorAll("#groupContainer select")].map(s => s.value).filter(Boolean);
-    }
-
-    // -----------------------
-    // Chart drawing (stable scaling)
-    // -----------------------
-    function updateChart() {
-      const pollutant = document.getElementById("pollutantSelect").value;
-      const startYear = +document.getElementById("startYear").value;
-      const endYear = +document.getElementById("endYear").value;
-      const groups = getSelectedGroups();
-      if (!pollutant || !startYear || !endYear || !groups.length) return;
-
-      // Refresh colour assignments (preserve old assignments where possible)
-      refreshColorAssignments(groups);
-
-      const headers = globalHeaders;
-      const startCol = headers.findIndex(h => h.toLowerCase() === `f${startYear}`);
-      const endCol = headers.findIndex(h => h.toLowerCase() === `f${endYear}`);
-      if (startCol === -1 || endCol === -1) return;
-
-      const years = headers.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ""));
-      const chartCols = ['Year'];
-      const chartRows = years.map(y => [y]);
-
-      // colours in order per group (use colorCache)
-      const colors = groups.map(g => colorCache[g] || getColorForGroup(g));
-
-      groups.forEach((g, gi) => {
-        const dataRow = groupedData[pollutant]?.[g];
-        chartCols.push(g + " (black)");
-        chartCols.push(g);
-        years.forEach((yr, yi) => {
-          const raw = dataRow ? dataRow[startCol + yi] : null;
-          const value = (raw === null || raw === undefined) ? null : parseFloat(raw);
-          const val = (value === null || Number.isNaN(value)) ? null : value;
-          chartRows[yi].push(val);
-          chartRows[yi].push(val);
-        });
-      });
-
-      const dataArray = [chartCols].concat(chartRows);
-      const dataTable = google.visualization.arrayToDataTable(dataArray);
-
-      const unit = pollutantUnits[pollutant] || "";
-      const values = chartRows.flatMap(r => r.slice(1).filter(v => v != null));
-      const maxVal = values.length ? Math.max(...values) : 0;
-      const upperLimit = maxVal > 0 ? maxVal * 1.15 : 1;
-
-      const seriesOptions = {};
-      groups.forEach((g, gi) => {
-        const baseIndex = gi * 2;
-        seriesOptions[baseIndex] = { color: '#000', lineWidth: 5, visibleInLegend: false, pointSize: 0 };
-        seriesOptions[baseIndex + 1] = { color: colors[gi], lineWidth: 3, visibleInLegend: true, pointSize: 4 };
-      });
-
-      const options = {
-        title: `${pollutant}${unit ? " (" + unit + ")" : ""}`,
-        legend: { position: 'bottom' },
-        hAxis: { title: 'Year' },
-        vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0, max: upperLimit } },
-        chartArea: { width: '80%', height: '70%' },
-        curveType: 'function',
-        series: seriesOptions
-      };
-
-      const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
-      chart.draw(dataTable, options);
-
-      // Ensure chart container visible (fade-in) after draw
-      const chartDiv = document.getElementById('chart_div');
-      setTimeout(() => chartDiv.classList.add('visible'), 120);
-
-      // download
-      document.getElementById('downloadBtn').onclick = () => {
-        const link = document.createElement('a');
-        link.href = chart.getImageURI();
-        link.download = `${pollutant}_comparison.png`;
-        link.click();
-      };
-    }
-
-    // -----------------------
-    // Initialization & loader control
-    // -----------------------
-    async function init() {
-      try {
-        await loadUnits();
-        await loadData();
-      } catch (err) {
-        console.error("Failed loading data:", err);
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.innerHTML = '<div style="color:#900;font-weight:700">Failed to load data — check sheet access.</div>';
-        return;
-      }
-
-      // Setup UI
-      setupSelectors();
-      addGroupSelector("All");
-      document.getElementById('pollutantSelect').value = 'PM2.5';
-
-      // Fade out loader and show content, then draw chart properly sized
-      const overlay = document.getElementById('loadingOverlay');
-      const content = document.getElementById('mainContent');
-      overlay.style.opacity = '0';
-      setTimeout(() => {
-        overlay.style.display = 'none';
-        content.style.display = 'block';
-        setTimeout(() => {
-          content.classList.add('loaded');
-          // draw chart after layout is visible so Google Charts sizes it correctly
-          setTimeout(() => {
-            updateChart();
-          }, 200);
-        }, 50);
-      }, 400);
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      google.charts.setOnLoadCallback(init);
-    });
-  </script>
+document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
+</script>
 </body>
 </html>
