@@ -286,16 +286,17 @@ function refreshGroupDropdowns(){
   });
 }
 
-function refreshButtons(){
+function refreshButtons() {
   const container = document.getElementById('groupContainer');
   // remove existing add / remove buttons so we can rebuild
   container.querySelectorAll('.add-btn, .remove-btn').forEach(n => n.remove());
 
   const rows = container.querySelectorAll('.groupRow');
-  // add remove buttons to each row (if more than 0)
-  if (rows.length > 0){
-    rows.forEach((row, idx) => {
-      if (!row.querySelector('.remove-btn')){
+
+  // Add remove buttons only if there are 2 or more groups
+  if (rows.length >= 2) {
+    rows.forEach((row) => {
+      if (!row.querySelector('.remove-btn')) {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
         removeBtn.innerHTML = '<span class="remove-icon">−</span> Remove Group';
@@ -310,12 +311,17 @@ function refreshButtons(){
     });
   }
 
-  // add the "Add Group" button at the end
+  // Add the "Add Group" button at the end
   const addBtn = document.createElement('button');
   addBtn.className = 'add-btn';
   addBtn.innerHTML = '<span class="add-icon">+</span> Add Group';
   addBtn.onclick = () => addGroupSelector("", true);
-  if (rows.length >= 10) { addBtn.textContent = 'Max Groups = 10'; addBtn.disabled = true; }
+
+  if (rows.length >= 10) {
+    addBtn.textContent = 'Max Groups = 10';
+    addBtn.disabled = true;
+  }
+
   container.appendChild(addBtn);
 }
 
