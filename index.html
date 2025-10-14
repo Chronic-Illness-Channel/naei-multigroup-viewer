@@ -131,7 +131,7 @@
       To remove a group, click <strong>“− Remove Group”</strong> next to it (this appears when two or more groups are selected).
     </p>
     <p class="italic text-sm text-gray-600">
-      💡 Tip: You can re-order the group boxes by clicking and dragging the ⠿ handle next to each group.
+      💡 Tip: You can re-order the group boxes by clicking and dragging the ⠿ handle next to each group — the chart updates automatically.
     </p>
 
     <h3 class="font-semibold text-blue-700">3️⃣ Set the Year Range</h3>
@@ -501,19 +501,39 @@ function updateChart(){
     seriesOptions[i] = { color: colors[i], lineWidth: 3, pointSize: 4 };
   });
 
+  // Estimate left margin dynamically based on Y-axis label width
+  const maxValue = Math.max(
+    ...chartRows.flatMap(r => r.slice(1).filter(v => typeof v === "number"))
+  );
+  const labelLength = maxValue ? maxValue.toLocaleString().length : 3;
+  const leftMargin = Math.min(100, Math.max(60, labelLength * 10)); // dynamic left padding
+
   const options = {
     title: '',
     width: '100%',
     height: '70%',
     legend: 'none',
     hAxis: { title: 'Year' },
-    vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0 } },
+    vAxis: {
+      title: `Emissions${unit ? " (" + unit + ")" : ""}`,
+      viewWindow: { min: 0 },
+      textStyle: { fontSize: 12 },
+      titleTextStyle: { fontSize: 13, bold: true }
+    },
     series: seriesOptions,
     curveType: smoothLines ? 'function' : 'none',
     lineWidth: 3,
     pointSize: 4,
-    chartArea: { top: 20, left: 60, right: 20, bottom: 60 }
+    chartArea: {
+      top: 20,
+      left: leftMargin,
+      right: 20,
+      bottom: 60,
+      width: '85%',
+      height: '70%'
+    }
   };
+
  
 
   // draw chart and show pollutant as visible page title
