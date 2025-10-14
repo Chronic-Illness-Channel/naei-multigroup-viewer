@@ -7,6 +7,8 @@
   <link rel="apple-touch-icon" href="favicon.png">
   
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
     body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; }
@@ -106,6 +108,95 @@
 
   <div id="mainContent" aria-hidden="true">
     <h2>NAEI Multi-Group Pollutant Viewer</h2>
+<details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
+  <summary class="cursor-pointer text-lg font-semibold text-blue-700 hover:text-blue-900">
+    🧭 How to Use the NAEI Multi-Group Pollutant Viewer
+  </summary>
+
+  <div class="mt-3 space-y-3 text-gray-800 leading-relaxed">
+    <p>
+      The NAEI Multi-Group Pollutant Viewer is built from data published by the National Atmospheric Emissions Inventory (NAEI), combining one or more sources and fuel types into groups to make emissions easier to explore and compare.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">1️⃣ Select a Pollutant</h3>
+    <p>
+      Use the <strong>Pollutant dropdown</strong> at the top to choose which pollutant you want to view (e.g., PM2.5, CO₂, NOx, etc.).<br>
+      Once selected, the chart and group options update automatically.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">2️⃣ Choose Emission Groups</h3>
+    <p>
+      Click <strong>“+ Add Group”</strong> to add a new group comparison (e.g., Road Transport, Power Stations, Domestic Combustion).<br>
+      You can add up to <strong>10 groups</strong> to compare at once.<br>
+      To remove a group, click <strong>“− Remove Group”</strong> next to it (this appears when two or more groups are selected).
+    </p>
+    <p class="italic text-sm text-gray-600">
+      💡 Tip: You can re-order the group boxes by clicking and dragging the ⠿ handle next to each group — the chart updates automatically.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">3️⃣ Set the Year Range</h3>
+    <p>
+      Use the <strong>Start Year</strong> and <strong>End Year</strong> dropdowns to focus on a particular time period.<br>
+      The chart will automatically refresh to show data for the chosen range.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">4️⃣ View and Interact with the Chart</h3>
+    <p>
+      Once you’ve chosen your pollutant, groups, and years, the interactive line chart will appear.<br>
+      <strong>Hover</strong> over any point on the chart to see the exact emission value for that year.<br>
+      The <strong>Y-axis</strong> shows total emissions, including units (e.g., kilotonnes).<br>
+      Each group is shown in a unique colour.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">5️⃣ Use the Legend to Toggle Lines</h3>
+    <p>
+      Above the chart, the legend lists all groups and their corresponding colours.<br>
+      <strong>Click a group name</strong> in the legend to hide or show that group’s line on the chart.<br>
+      Faded items indicate hidden or unavailable data.<br>
+      <em>(Groups labelled “(No data available)” are included for reference but contain no plotted values.)</em>
+    </p>
+
+    <h3 class="font-semibold text-blue-700">6️⃣ Smooth or Straight Lines</h3>
+    <p>
+      Click the <strong>“🚫 Disable Smoothing”</strong> button to switch to straight (non-curved) lines.<br>
+      Click again (the button will change to <strong>“✅ Enable Smoothing”</strong>) to re-enable smooth, curved lines.
+    </p>
+
+    <h3 class="font-semibold text-blue-700">7️⃣ Download Options</h3>
+    <p>You can export both the chart and the data for your own analysis or reporting.</p>
+
+    <p>
+      <strong>📊 Download Chart as PNG</strong><br>
+      Click <strong>“⬇️ Download Chart as PNG”</strong> to save the chart as an image.<br>
+      The export includes:
+      <ul class="list-disc list-inside ml-4">
+        <li>The chart</li>
+        <li>The custom colour legend</li>
+        <li>The pollutant name and emission unit</li>
+        <li>A small Defra/DESNZ footer and the CIC logo</li>
+      </ul>
+    </p>
+
+    <p>
+      <strong>📄 Download Data</strong><br>
+      <strong>CSV:</strong> Click “📄 Download Data – CSV” for a spreadsheet-compatible text file.<br>
+      <strong>Excel:</strong> Click “📊 Download Data – Excel” for a formatted Excel workbook.<br>
+      Each data file includes:
+      <ul class="list-disc list-inside ml-4">
+        <li>A first line showing the pollutant name and emission unit</li>
+        <li>A table with groups as rows and years as columns</li>
+        <li>A footer row with the download timestamp</li>
+      </ul>
+    </p>
+
+    <h3 class="font-semibold text-blue-700">8️⃣ Licensing and Attribution</h3>
+    <p>
+      All data is © Crown copyright (Defra & DESNZ) and available under the
+      <strong>Open Government Licence (OGL)</strong>.<br>
+      See links in the page footer for full details.
+    </p>
+  </div>
+</details>
 
     <div>
       <label for="pollutantSelect">Pollutant:</label>
@@ -121,7 +212,12 @@
       <label for="endYear">End Year:</label>
       <select id="endYear"></select>
 
-      <button id="downloadBtn" style="display:inline-block;">⬇️ Download Chart as PNG</button>
+      <button id="downloadBtn">⬇️ Download Chart as PNG</button>
+	  <button id="toggleSmoothBtn">🚫 Disable Smoothing</button>
+	  <button id="downloadCSVBtn">📄 Download Data - CSV</button>
+	  <button id="downloadXLSXBtn">📊 Download Data - Excel</button>
+
+	  
     </div>
 
     <div id="chartTitle" aria-hidden="true"></div>
@@ -150,6 +246,8 @@ const distinctPalette=['#E6194B','#3CB44B','#FFE119','#4363D8','#F58231','#911EB
 const categoryBaseColor={ecodesign:distinctPalette[4],fireplace:distinctPalette[0],gas:distinctPalette[3],power:distinctPalette[1],road:distinctPalette[6]};
 let colorCache={}, availableColors=[...distinctPalette];
 let chart; // global chart instance
+let smoothLines = true; // default to smooth (curved) lines
+
 
 /* ---------------- Color helpers ---------------- */
 function resetColorSystem() {
@@ -411,9 +509,12 @@ function updateChart(){
     hAxis: { title: 'Year' },
     vAxis: { title: `Emissions${unit ? " (" + unit + ")" : ""}`, viewWindow: { min: 0 } },
     series: seriesOptions,
-    curveType: 'function',
+    curveType: smoothLines ? 'function' : 'none',
+    lineWidth: 3,
+    pointSize: 4,
     chartArea: { top: 20, left: 60, right: 20, bottom: 60 }
   };
+ 
 
   // draw chart and show pollutant as visible page title
   chart = new google.visualization.LineChart(document.getElementById('chart_div'));
@@ -635,6 +736,10 @@ async function init(){
   else addGroupSelector('', true);
 
   setupDownloadButton();
+  setupSmoothingToggle();
+  
+  document.getElementById('downloadCSVBtn').addEventListener('click', () => exportData('csv'));
+  document.getElementById('downloadXLSXBtn').addEventListener('click', () => exportData('xlsx'));
 
   // default pollutant (if exists)
   const sel = document.getElementById('pollutantSelect');
@@ -649,6 +754,76 @@ async function init(){
     setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
   }, 400);
 }
+function setupSmoothingToggle() {
+  const btn = document.getElementById('toggleSmoothBtn');
+  btn.addEventListener('click', () => {
+    smoothLines = !smoothLines;
+    btn.textContent = smoothLines ? '🚫 Disable Smoothing' : '✅ Enable Smoothing';
+    updateChart();
+  });
+}
+
+function exportData(format = 'csv') {
+  const pollutant = document.getElementById('pollutantSelect').value;
+  const startYear = +document.getElementById('startYear').value;
+  const endYear = +document.getElementById('endYear').value;
+  const selectedGroups = getSelectedGroups();
+  if (!pollutant || !selectedGroups.length || !globalHeaders.length) {
+    alert('Please select a pollutant and at least one group first.');
+    return;
+  }
+
+  // Find columns for selected years
+  const startCol = globalHeaders.findIndex(h => h && h.toLowerCase() === `f${startYear}`);
+  const endCol = globalHeaders.findIndex(h => h && h.toLowerCase() === `f${endYear}`);
+  if (startCol === -1 || endCol === -1 || endCol < startCol) {
+    alert('Invalid year range.');
+    return;
+  }
+
+  const years = globalHeaders.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ''));
+  const unit = pollutantUnits[pollutant] || '';
+
+  // --- Build rows ---
+  const rows = [];
+  const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  // First row: pollutant and unit
+  rows.push([`Pollutant: ${pollutant}`, `Unit: ${unit}`]);
+  rows.push([]); // spacer row
+  // Header row
+  rows.push(['Group', ...years]);
+
+  // Data rows
+  selectedGroups.forEach(group => {
+    const dataRow = groupedData[pollutant]?.[group];
+    const values = years.map((y, idx) => {
+      const raw = dataRow ? dataRow[startCol + idx] : null;
+      return raw ?? '';
+    });
+    rows.push([group, ...values]);
+  });
+
+  rows.push([]); // spacer
+  rows.push([`Downloaded on: ${timestamp}`]);
+
+  // --- Generate and download file ---
+  const safePollutant = pollutant.replace(/[^a-z0-9_\-]/gi, '_');
+  if (format === 'csv') {
+    const csvContent = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${safePollutant}_data.csv`;
+    link.click();
+  } else if (format === 'xlsx') {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    XLSX.writeFile(wb, `${safePollutant}_data.xlsx`);
+  }
+}
+
 
 document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
 </script>
