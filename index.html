@@ -369,7 +369,13 @@ function addGroupSelector(defaultValue = "", usePlaceholder = true){
     ph.disabled = true; ph.selected = true;
     sel.add(ph);
   }
-  const allGroups = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  const allGroups = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a, b) => {
+    // Move "All" to top, then alphabetical
+    if (a.toLowerCase() === "all") return -1;
+    if (b.toLowerCase() === "all") return 1;
+    return a.localeCompare(b);
+  });
+ 
   const selected = getSelectedGroups();
   allGroups.forEach(g => {
     if (!selected.includes(g) || g === defaultValue) sel.add(new Option(g,g));
@@ -386,7 +392,12 @@ function addGroupSelector(defaultValue = "", usePlaceholder = true){
 
 function refreshGroupDropdowns(){
   const selected = getSelectedGroups();
-  const all = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort();
+  const all = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a, b) => {
+    if (a.toLowerCase() === "all") return -1;
+    if (b.toLowerCase() === "all") return 1;
+    return a.localeCompare(b);
+  });
+
   document.querySelectorAll('#groupContainer select').forEach(select => {
     const current = select.value;
     Array.from(select.options).forEach(opt => { if (opt.value !== '') opt.remove(); });
@@ -865,13 +876,44 @@ function exportData(format = 'csv') {
     XLSX.writeFile(wb, `${safePollutant}_data.xlsx`);
   }
 }
-// --- Load and display Group Info from CSV file ---
 async function loadGroupInfo() {
-  try {
-	const response = await fetch('Groups-NAEI_mulitgroup_viewer.csv?cacheBust=' + Date.now());
-	
-    if (!response.ok) throw new Error('Failed to fetch CSV file');
+  const NFRCODE_SHEET_URL =
+    'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=NFRCodes&tq=SELECT%20*';
 
+  try {
+    const nfrRes = await fetch(NFRCODE_SHEET_URL);
+    const nfrTxt = await nfrRes.text();
+
+   // console.log("NFRCodes raw gviz response:", nfrTxt.slice(0, 500));
+
+    const jsonStart = nfrTxt.indexOf('{');
+    const jsonEnd = nfrTxt.lastIndexOf('}');
+    const nfrJson = JSON.parse(nfrTxt.substring(jsonStart, jsonEnd + 1));
+
+    const nfrMap = {};
+
+    if (nfrJson.table && nfrJson.table.rows && nfrJson.table.rows.length > 1) {
+      const firstRow = nfrJson.table.rows[0].c.map(c => c?.v?.toString().trim().toLowerCase());
+      console.log('Detected NFRCodes header row:', firstRow);
+
+      const codeIdx = firstRow.findIndex(c => c.includes('nfr_code'));
+      const descIdx = firstRow.findIndex(c => c.includes('desc'));
+      const dataRows = nfrJson.table.rows.slice(1);
+
+      dataRows.forEach(r => {
+        if (!r.c) return;
+        const codeCell = r.c[codeIdx];
+        const descCell = r.c[descIdx];
+        if (!codeCell || !descCell) return;
+
+        const code = codeCell.v?.toString().trim().replace(/\s+/g, '').toUpperCase();
+        const desc = descCell.v?.toString().trim();
+        if (code && desc) nfrMap[code] = desc;
+      });
+    }
+
+    const response = await fetch('Groups-NAEI_mulitgroup_viewer.csv?cacheBust=' + Date.now());
+    if (!response.ok) throw new Error('Failed to fetch CSV file');
     const text = await response.text();
     const lines = text.trim().split(/\r?\n/);
     const headers = lines.shift().split(',').map(h => h.trim().toLowerCase());
@@ -879,15 +921,25 @@ async function loadGroupInfo() {
     const titleIdx = headers.findIndex(h => h.includes('group_title'));
     const sourceIdx = headers.findIndex(h => h.includes('source'));
     const activityIdx = headers.findIndex(h => h.includes('activity'));
-    if (titleIdx === -1 || sourceIdx === -1 || activityIdx === -1)
-      throw new Error('CSV missing required columns');
+    const nfrIdx = headers.findIndex(h => h.includes('nfrcode'));
 
     const groups = lines.map(line => {
       const cells = line.split(',').map(c => c.trim());
+      const nfrCodes = nfrIdx !== -1
+        ? (cells[nfrIdx] || "").split(';').map(n => n.trim()).filter(Boolean)
+        : [];
+
+      const nfrDescriptions = nfrCodes.map(code => {
+        const lookupKey = code.toString().trim().replace(/\s+/g, '').toUpperCase();
+        const desc = nfrMap[lookupKey] || "(Description not found)";
+        return { code, desc };
+      });
+
       return {
         name: cells[titleIdx] || "",
         sources: (cells[sourceIdx] || "").split(';').map(s => s.trim()).filter(Boolean),
-        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean)
+        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean),
+        nfrDescriptions
       };
     }).filter(g => g.name);
 
@@ -897,131 +949,62 @@ async function loadGroupInfo() {
       return a.name.localeCompare(b.name);
     });
 
-    // Build HTML with fixed header + scrollable body
+    // --- Build HTML output ---
     let html = `
-  <style>
-    #group-info {
-      max-height: 70vh;
-      overflow: hidden;
-      position: relative;
-      opacity: 0;
-      transition: opacity 0.35s ease-in-out;
-      border-left: 2px solid #444;
-      border-right: 2px solid #444;
-      border-bottom: 2px solid #444;
-      border-top: 2px solid #444;
-      background: #fff;
-    }
-    #group-info.visible {
-      opacity: 1;
-    }
-
-    /* wrapper table stays full width; no separate scroll on header */
-    #group-info table {
-      border-collapse: collapse;
-      width: 100%;
-      font-size: 14px;
-      table-layout: fixed;
-      box-sizing: border-box;
-    }
-
-    #group-info thead th,
-    #group-info td {
-      border: 1px solid #444;
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-      box-sizing: border-box;
-    }
-
-    #group-info thead th {
-      background-color: #d0d0d0;
-      font-weight: 600;
-      position: sticky;
-      top: 0;
-      z-index: 2;
-    }
-
-    #group-info tbody {
-      display: block;
-      max-height: 65vh;
-      overflow-y: auto;
-      overflow-x: hidden; /* fully disables sideways scroll */
-    }
-
-    #group-info thead,
-    #group-info tbody tr {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
-    }
-
-    #group-info tr:nth-child(even) {
-      background-color: #fafafa;
-    }
-
-    #group-info tr:hover {
-      background-color: #f0f0f0;
-    }
-  </style>
- 
-
-      <table id="groupTable">
+      <table id="groupTable" style="border-collapse:collapse;width:100%;font-family:inherit;font-size:14px;color:#000;">
         <thead>
-          <tr>
-            <th style="width: 25%;">Group Name</th>
-            <th style="width: 40%;">Source Names</th>
-            <th style="width: 35%;">Fuel Types (Activity in NAEI data)</th>
+          <tr style="background:#d0d0d0;">
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:25%;">Group Name</th>
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:40%;">Sources</th>
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:35%;">Fuel Types (Activity in NAEI data)</th>
           </tr>
         </thead>
         <tbody>
     `;
 
-	groups.forEach(g => {
-	  const sourcesText = g.sources.length ? g.sources.join('\n') : 'All Sources';
-	  const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
+    groups.forEach(g => {
+      let sourcesHTML = "";
 
-	  html += `
-	    <tr>
-	      <td>${g.name}</td>
-	      <td style="white-space: pre-line;">${sourcesText}</td>
-	      <td style="white-space: pre-line;">${activitiesText}</td>
-	    </tr>
-	  `;
-	});
- 
+      if (g.nfrDescriptions.length) {
+        sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
+        // 👇 Removed monospace — inherits normal page font
+        sourcesHTML += `<div style="white-space:pre-line;">`;
+        g.nfrDescriptions.forEach(n => {
+          sourcesHTML += `${n.code}\t${n.desc}\n`;
+        });
+        sourcesHTML += `</div>`;
+      } else {
+        sourcesHTML = g.sources.length ? g.sources.join('\n') : 'All Sources';
+      }
+
+      const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
+
+      html += `
+        <tr style="border:1px solid #444;">
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${g.name}</td>
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${sourcesHTML}</td>
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${activitiesText}</td>
+        </tr>
+      `;
+    });
 
     html += "</tbody></table>";
+
     const container = document.getElementById('group-info');
+
+    // ✅ Ensure container matches the main page font
+    container.style.fontFamily = 'system-ui, sans-serif';
+    container.style.fontSize = '14px';
+    container.style.color = '#000';
+
     container.innerHTML = html;
-
-    // --- Align header and body columns after render ---
-    const alignColumns = () => {
-      const table = document.getElementById('groupTable');
-      const headCells = table.querySelectorAll('thead th');
-      const bodyCells = table.querySelector('tbody tr:first-child')?.children;
-      if (!headCells.length || !bodyCells) return;
-
-      headCells.forEach((th, i) => {
-        const width = bodyCells[i]?.offsetWidth || th.offsetWidth;
-        th.style.width = width + 'px';
-      });
-      container.classList.add('visible');
-    };
-
-    // Delay a bit to ensure full rendering before aligning
-    requestAnimationFrame(() => setTimeout(alignColumns, 100));
-
-    // Also re-align on window resize
-    window.addEventListener('resize', alignColumns);
 
   } catch (err) {
     console.error("Error loading group info:", err);
     document.getElementById('group-info').innerHTML =
-      "<p class='text-red-600'>⚠️ Could not load group information. Please check the CSV file.</p>";
+      "<p class='text-red-600'>⚠️ Could not load group or NFRCodes information.</p>";
   }
 }
-
 document.addEventListener('DOMContentLoaded', loadGroupInfo);
 
 document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
