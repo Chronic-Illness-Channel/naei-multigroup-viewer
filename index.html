@@ -10,7 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <script src="https://www.gstatic.com/charts/loader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; }
     label { font-weight:600; margin-right:6px; }
@@ -254,16 +253,11 @@
 <script>
 google.charts.load('current', {packages:['corechart']});
 
-// Supabase project connection
-const SUPABASE_URL = 'https://vhplzwzzkeueyelaqftl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZocGx6d3p6a2V1ZXllbGFxZnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NjQwODUsImV4cCI6MjA3NjA0MDA4NX0.mBAwFmfSpqffvp1GGDHKvp-y_hukSZmF4GN-Ghnf--o';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Data URLs (your gviz endpoints)
+const DATA_SHEET_URL='https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=23ds_group_data&tq=SELECT%20*';
+const UNIT_SHEET_URL='https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=Pollutant&tq=SELECT%20*';
 
 let globalRows=[], globalHeaders=[], pollutantUnits={}, groupedData={};
-let allGroupsList = [];
-let allPollutants = [];
-let allGroups = [];
-
 const distinctPalette=['#E6194B','#3CB44B','#FFE119','#4363D8','#F58231','#911EB4','#46F0F0','#F032E6','#BCF60C','#FABEBE'];
 const categoryBaseColor={ecodesign:distinctPalette[4],fireplace:distinctPalette[0],gas:distinctPalette[3],power:distinctPalette[1],road:distinctPalette[6]};
 let colorCache={}, availableColors=[...distinctPalette];
@@ -302,154 +296,56 @@ function getColorForGroup(name) {
   return chosenColor;
 }
 
+/* ---------------- Data fetching ---------------- */
+async function fetchGVizData(url){
+  const res = await fetch(url);
+  const txt = await res.text();
+  if (!txt.includes('{')) throw new Error('Unexpected sheet response');
+  // gviz returns something like: /*O_o*/ google.visualization.Query.setResponse({...});
+  return JSON.parse(txt.substring(txt.indexOf('{'), txt.lastIndexOf('}')+1));
+}
 
-// --- Replace Google Sheets data load with Supabase ---
-async function loadUnits() {
-  const { data, error } = await supabase.from('NAEI_global_Pollutants').select('*');
-  if (error) throw error;
-  pollutantUnits = {};
-  data.forEach(r => {
-    if (r.Pollutant && r["Emission Unit"]) {
-      pollutantUnits[r.Pollutant] = r["Emission Unit"];
-    } else if (r.pollutant) {
-      pollutantUnits[r.pollutant] = r["emission unit"] || r['Emission Unit'] || '';
-    }
+async function loadUnits(){
+  const j = await fetchGVizData(UNIT_SHEET_URL);
+  if (!j.table || !j.table.rows) return;
+  j.table.rows.forEach(r => {
+    const cells = r.c.map(c => c ? c.v : null);
+    if (cells[0] && cells[1]) pollutantUnits[cells[0]] = cells[1];
   });
 }
 
-async function loadData() {
-  console.log("Fetching data from Supabase (separate tables for robustness)...");
-
-  // Fetch pollutants, groups, and the timeseries table separately.
-  const [pollutantsResp, groupsResp, dataResp] = await Promise.all([
-    supabase.from('NAEI_global_Pollutants').select('*'),
-    supabase.from('NAEI_global_t_Group').select('*'),
-    supabase.from('NAEI_2023ds_t_Group_Data').select('*')
-  ]);
-
-  if (pollutantsResp.error) throw pollutantsResp.error;
-  if (groupsResp.error) throw groupsResp.error;
-  if (dataResp.error) throw dataResp.error;
-
-  const pollutants = pollutantsResp.data || [];
-  const groups = groupsResp.data || [];
-  const rows = dataResp.data || [];
-
-  // Build ID -> name maps for joins
-  const pollutantIdToName = {};
-  pollutants.forEach(p => {
-    const id = p.id;
-    const name = p.Pollutant || p.pollutant || p['Pollutant'] || p['pollutant'];
-    if (name) {
-      pollutantIdToName[id] = name;
-      // capture unit if present
-      const unit = p["Emission Unit"] || p["emission unit"] || p['Emission Unit'] || p.emission_unit || '';
-      if (unit) pollutantUnits[name] = unit;
-    }
+async function loadData(){
+  const j = await fetchGVizData(DATA_SHEET_URL);
+  if (!j.table || !j.table.rows || !j.table.cols) throw new Error('Unexpected sheet structure');
+  const headers = j.table.cols.map(c => c.label);
+  const rows = j.table.rows.map(r => r.c.map(c => c ? c.v : null));
+  globalHeaders = headers; globalRows = rows; groupedData = {};
+  rows.forEach(row => {
+    const group = row[0], pollutant = row[1];
+    if (!group || !pollutant) return;
+    if (!groupedData[pollutant]) groupedData[pollutant] = {};
+    groupedData[pollutant][group] = row;
   });
-
-  const groupIdToTitle = {};
-  groups.forEach(g => {
-    const id = g.id;
-    const title = g.Group_Title || g.group_title || g['Group_Title'] || g.group_title;
-    if (title) groupIdToTitle[id] = title;
-  });
-
-  // Build lists used for dropdowns
-  allPollutants = [...new Set(Object.values(pollutantIdToName).filter(Boolean))].sort();
-  allGroups = [...new Set(Object.values(groupIdToTitle).filter(Boolean))].sort((a, b) => {
-    if (a.toLowerCase() === "all") return -1;
-    if (b.toLowerCase() === "all") return 1;
-    return a.localeCompare(b);
-  });
-
-  window.allGroupsList = allGroups;
-  window.allPollutants = allPollutants;
-
-  // Determine year headers from data rows (look for fYYYY fields)
-  if (!rows || rows.length === 0) {
-    // no timeseries rows — still return groups/pollutants for dropdowns
-    window.globalHeaders = [];
-    window.globalYears = [];
-    window.globalYearKeys = [];
-    groupedData = {};
-    console.log('No timeseries rows found in NAEI_2023ds_t_Group_Data');
-    return;
-  }
-
-  // ensure consistent header ordering (f1970 ... f2023)
-  const sample = rows[0];
-  const headers = Object.keys(sample).filter(k => /^f\d{4}$/.test(k)).sort((a,b)=> +a.slice(1) - +b.slice(1));
-  window.globalHeaders = headers;
-  window.globalYears = headers.map(h => h.slice(1));
-  window.globalYearKeys = headers;
-
-  // Build groupedData using FK ids and the lookup maps
-  groupedData = {};
-  rows.forEach(r => {
-    const polId = r.Pollutant_id ?? r.pollutant_id ?? r.PollutantId ?? r.pollutantid;
-    const grpId = r.Group_id ?? r.group_id ?? r.GroupId ?? r.groupid;
-    const polName = pollutantIdToName[polId];
-    const grpName = groupIdToTitle[grpId];
-    if (!polName || !grpName) return;
-    if (!groupedData[polName]) groupedData[polName] = {};
-    groupedData[polName][grpName] = r;
-  });
-
-  // If the groups table didn't provide titles (or permissions prevented access), fall back to groups
-  // discovered in the timeseries rows themselves
-  const groupsFromData = [...new Set(Object.values(groupedData).flatMap(pol => Object.keys(pol)))];
-  if ((!allGroups || allGroups.length === 0) && groupsFromData.length) {
-    allGroups = groupsFromData.sort((a, b) => {
-      if (a.toLowerCase() === "all") return -1;
-      if (b.toLowerCase() === "all") return 1;
-      return a.localeCompare(b);
-    });
-    window.allGroupsList = allGroups;
-    console.warn('Groups list was empty from NAEI_global_t_Group — falling back to groups found in timeseries rows.');
-  }
-
-  console.log(`Loaded ${rows.length} timeseries rows; ${allPollutants.length} pollutants; ${allGroups.length} groups`);
 }
-
-
 
 /* ---------------- UI: selectors & group controls ---------------- */
 function setupSelectors(){
-  // ✅ Use pollutant list from Supabase loadData
+  const pollutants = [...new Set(globalRows.map(r => r[1]).filter(Boolean))].sort();
   const sel = document.getElementById('pollutantSelect');
   sel.innerHTML = '<option value="">Select pollutant</option>';
-  if (window.allPollutants && window.allPollutants.length) {
-    window.allPollutants.forEach(p => sel.add(new Option(p, p)));
-  }
+  pollutants.forEach(p => sel.add(new Option(p, p)));
 
-  // ✅ Initialise group container if not already
-  if (!window.allGroupsList && window.allGroups) {
-    window.allGroupsList = window.allGroups;
-  }
+  const years = globalHeaders.slice(2).map(h => h ? h.replace(/^f/, '') : '');
+  const s = document.getElementById('startYear'), e = document.getElementById('endYear');
+  s.innerHTML = ''; e.innerHTML = '';
+  years.forEach(y => { if(y) { s.add(new Option(y,y)); e.add(new Option(y,y)); } });
+  s.value = years[0] || '';
+  e.value = years[years.length-1] || '';
 
-
-  // ✅ Use precomputed globalYears instead of header slice
-  const years = window.globalYears || [];
-  const startSel = document.getElementById('startYear');
-  const endSel = document.getElementById('endYear');
-
-  startSel.innerHTML = '';
-  endSel.innerHTML = '';
-
-  years.forEach(y => {
-    startSel.add(new Option(y, y));
-    endSel.add(new Option(y, y));
-  });
-
-  startSel.value = years[0] || '';
-  endSel.value = years[years.length - 1] || '';
-
-  sel.addEventListener('change', updateChart);
-  startSel.addEventListener('change', updateChart);
-  endSel.addEventListener('change', updateChart);
- }
-
+  sel.addEventListener('change', () => updateChart());
+  s.addEventListener('change', () => updateChart());
+  e.addEventListener('change', () => updateChart());
+}
 
 function getSelectedGroups(){ return [...document.querySelectorAll('#groupContainer select')].map(s => s.value).filter(Boolean); }
 
@@ -473,8 +369,13 @@ function addGroupSelector(defaultValue = "", usePlaceholder = true){
     ph.disabled = true; ph.selected = true;
     sel.add(ph);
   }
-  const allGroups = allGroupsList || [];
-
+  const allGroups = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a, b) => {
+    // Move "All" to top, then alphabetical
+    if (a.toLowerCase() === "all") return -1;
+    if (b.toLowerCase() === "all") return 1;
+    return a.localeCompare(b);
+  });
+ 
   const selected = getSelectedGroups();
   allGroups.forEach(g => {
     if (!selected.includes(g) || g === defaultValue) sel.add(new Option(g,g));
@@ -491,8 +392,11 @@ function addGroupSelector(defaultValue = "", usePlaceholder = true){
 
 function refreshGroupDropdowns(){
   const selected = getSelectedGroups();
-  const all = allGroupsList || [];
-
+  const all = [...new Set(globalRows.map(r=>r[0]).filter(Boolean))].sort((a, b) => {
+    if (a.toLowerCase() === "all") return -1;
+    if (b.toLowerCase() === "all") return 1;
+    return a.localeCompare(b);
+  });
 
   document.querySelectorAll('#groupContainer select').forEach(select => {
     const current = select.value;
@@ -591,23 +495,19 @@ function updateChart(){
   if (!pollutant || !startYear || !endYear || !groups.length) return;
 
   resetColorSystem();
-  // Use the global year keys to determine which years to display
-  const yearsAll = window.globalYears || [];
-  const yearKeys = window.globalYearKeys || [];
-  const startIdx = yearsAll.indexOf(String(startYear));
-  const endIdx = yearsAll.indexOf(String(endYear));
-  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) return;
-  const years = yearsAll.slice(startIdx, endIdx + 1);
-  const keysForYears = yearKeys.slice(startIdx, endIdx + 1);
+  const headers = globalHeaders;
+  const startCol = headers.findIndex(h => h && h.toLowerCase() === `f${startYear}`);
+  const endCol = headers.findIndex(h => h && h.toLowerCase() === `f${endYear}`);
+  if (startCol === -1 || endCol === -1 || endCol < startCol) return;
+  const years = headers.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ''));
   const colors = groups.map(g => getColorForGroup(g));
 
   // Build rows of data (year + series values). Use null for missing.
   const chartRows = years.map((y, rowIdx) => {
     const row = [y];
-    const key = keysForYears[rowIdx]; // e.g. 'f2015'
     groups.forEach(g => {
       const dataRow = groupedData[pollutant]?.[g];
-      const raw = dataRow ? dataRow[key] : null;
+      const raw = dataRow ? dataRow[startCol + rowIdx] : null;
       const val = (raw === null || raw === undefined) ? null : parseFloat(raw);
       row.push(Number.isNaN(val) ? null : val);
     });
@@ -670,20 +570,9 @@ function updateChart(){
  
 
   // draw chart and show pollutant as visible page title
-  const chartContainer = document.getElementById('chart_div');
-  chart = new google.visualization.LineChart(chartContainer);
-
-  // Compute safe width/height to avoid negative SVG dimensions
-  const safeWidth = Math.max(chartContainer.offsetWidth || 0, 300);
-  const safeHeight = Math.max(chartContainer.offsetHeight || 0, 200);
-  options.width = safeWidth;
-  options.height = safeHeight;
-
-  // Delay slightly to let layout stabilize (prevents negative sizes)
-  setTimeout(() => {
-    chart.draw(dataTable, options);
-    chartContainer.classList.add('visible');
-  }, 100);
+  chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+  chart.draw(dataTable, options);
+  document.getElementById('chart_div').classList.add('visible');
 
   // update visible title on page
   const titleEl = document.getElementById('chartTitle');
@@ -884,64 +773,39 @@ function setupDownloadButton() {
 /* ---------------- Initialization ---------------- */
 async function init(){
   try {
-    console.log("🔄 Initializing Supabase data...");
-    // --- Load all data once ---
-    await Promise.all([loadUnits(), loadData()]);
-
-    // --- Populate dropdowns ---
-    setupSelectors();
-
-    const pollutantSelect = document.getElementById('pollutantSelect');
-    const pm25 = pollutantSelect.querySelector('option[value="PM2.5"]');
-    if (pm25) pollutantSelect.value = "PM2.5";
-    else if (pollutantSelect.options.length > 1) pollutantSelect.selectedIndex = 1;
-
-    // Determine initial group to add:
-    let firstGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all")
-      || (window.allGroupsList?.[0] || "");
-
-    // If group list is empty or doesn't contain "All", fall back to groups discovered in groupedData
-    if (!firstGroup) {
-      // try groups for selected pollutant first
-      const chosenPoll = pollutantSelect.value || window.allPollutants?.[0];
-      const groupsForPoll = chosenPoll ? Object.keys(groupedData[chosenPoll] || {}) : [];
-      firstGroup = groupsForPoll[0] || (Object.values(groupedData).flatMap(p => Object.keys(p))[0] || "");
-    }
-
-    if (firstGroup) addGroupSelector(firstGroup, false);
-    else {
-      // Ensure at least one selector exists so the user can pick a group manually
-      addGroupSelector("", true);
-    }
-
-    // --- Draw chart once data ready if pollutant and group available ---
-    if (pollutantSelect.value && getSelectedGroups().length) {
-      console.log("✅ Drawing initial chart:", pollutantSelect.value, getSelectedGroups()[0]);
-      await new Promise(r => setTimeout(r, 400));
-      updateChart();
-    }
-
-    // --- Setup UI and show ---
-    setupDownloadButton();
-    setupSmoothingToggle();
-    document.getElementById('downloadCSVBtn')
-      .addEventListener('click', () => exportData('csv'));
-    document.getElementById('downloadXLSXBtn')
-      .addEventListener('click', () => exportData('xlsx'));
-
-    const overlay = document.getElementById('loadingOverlay');
-    const content = document.getElementById('mainContent');
-    overlay.style.opacity = '0';
-    setTimeout(() => {
-      overlay.style.display = 'none';
-      content.style.display = 'block';
-      setTimeout(() => content.classList.add('loaded'), 200);
-    }, 400);
+    await loadUnits();
+    await loadData();
   } catch (err) {
-    console.error("❌ Initialization failed:", err);
-    document.getElementById('loadingOverlay').innerHTML =
-      '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
+    console.error('Failed loading data:', err);
+    document.getElementById('loadingOverlay').innerHTML = '<div style="color:#900;font-weight:700">Failed to load data — check sheet access.</div>';
+    return;
   }
+
+  setupSelectors();
+
+  // add one default group selector: prefer the first available group, otherwise placeholder
+  const firstGroup = globalRows.length ? globalRows[0][0] : '';
+  if (firstGroup) addGroupSelector(firstGroup, false);
+  else addGroupSelector('', true);
+
+  setupDownloadButton();
+  setupSmoothingToggle();
+  
+  document.getElementById('downloadCSVBtn').addEventListener('click', () => exportData('csv'));
+  document.getElementById('downloadXLSXBtn').addEventListener('click', () => exportData('xlsx'));
+
+  // default pollutant (if exists)
+  const sel = document.getElementById('pollutantSelect');
+  if (sel.querySelector('option[value="PM2.5"]')) sel.value = 'PM2.5';
+
+  // show UI
+  const overlay = document.getElementById('loadingOverlay'), content = document.getElementById('mainContent');
+  overlay.style.opacity = '0';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    content.style.display = 'block';
+    setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
+  }, 400);
 }
 function setupSmoothingToggle() {
   const btn = document.getElementById('toggleSmoothBtn');
@@ -962,18 +826,15 @@ function exportData(format = 'csv') {
     return;
   }
 
-
-  // Use the global year keys / labels determined earlier
-  const yearsAll = window.globalYears || [];
-  const yearKeys = window.globalYearKeys || [];
-  const startIdx = yearsAll.indexOf(String(startYear));
-  const endIdx = yearsAll.indexOf(String(endYear));
-  if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+  // Find columns for selected years
+  const startCol = globalHeaders.findIndex(h => h && h.toLowerCase() === `f${startYear}`);
+  const endCol = globalHeaders.findIndex(h => h && h.toLowerCase() === `f${endYear}`);
+  if (startCol === -1 || endCol === -1 || endCol < startCol) {
     alert('Invalid year range.');
     return;
   }
-  const years = yearsAll.slice(startIdx, endIdx + 1);
-  const keysForYears = yearKeys.slice(startIdx, endIdx + 1);
+
+  const years = globalHeaders.slice(startCol, endCol + 1).map(h => h.replace(/^f/, ''));
   const unit = pollutantUnits[pollutant] || '';
 
   // --- Build rows ---
@@ -986,18 +847,15 @@ function exportData(format = 'csv') {
   // Header row
   rows.push(['Group', ...years]);
 
-
-  // Data rows - read values by key for robustness
+  // Data rows
   selectedGroups.forEach(group => {
-    const values = keysForYears.map((k) => {
-      // look up the data row for this pollutant and group
-      const dataRow = groupedData[pollutant] ? groupedData[pollutant][group] : null;
-      const raw = dataRow ? dataRow[k] : null;
+    const dataRow = groupedData[pollutant]?.[group];
+    const values = years.map((y, idx) => {
+      const raw = dataRow ? dataRow[startCol + idx] : null;
       return raw ?? '';
     });
     rows.push([group, ...values]);
   });
-
 
   rows.push([]); // spacer
   rows.push([`Downloaded on: ${timestamp}`]);
@@ -1149,9 +1007,7 @@ async function loadGroupInfo() {
 }
 document.addEventListener('DOMContentLoaded', loadGroupInfo);
 
-
-// Wait until Google Charts library is ready, then run init
-google.charts.setOnLoadCallback(init);
+document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
 </script>
 </body>
 </html>
