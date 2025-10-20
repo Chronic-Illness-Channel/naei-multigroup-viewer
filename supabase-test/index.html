@@ -1157,8 +1157,19 @@ async function init(){
     // --- Load all data once ---
     await Promise.all([loadUnits(), loadData()]);
 
+    // Ensure main content is completely hidden during setup
+    const mainContent = document.getElementById("mainContent");
+    mainContent.style.visibility = "hidden";
+    mainContent.style.opacity = "0";
+
     // --- Populate dropdowns ---
     setupSelectors();
+
+    // Allow DOM to settle after all manipulations
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Restore visibility
+    mainContent.style.visibility = "visible";
 
     // Check if this is a shared URL that needs processing
     const urlParams = parseUrlParameters();
@@ -1179,8 +1190,8 @@ async function init(){
         pollutantSelect.value = "PM2.5";
       }
 
-      // Show UI immediately for normal URLs - but wait for DOM updates
-      requestAnimationFrame(() => {
+      // Show UI immediately for normal URLs - but wait for all DOM updates to complete
+      setTimeout(() => {
         const overlay = document.getElementById("loadingOverlay");
         const content = document.getElementById("mainContent");
         overlay.style.opacity = "0";
@@ -1193,7 +1204,7 @@ async function init(){
             setTimeout(() => updateChart(), 200);
           }, 50);
         }, 400);
-      });
+      }, 100);
       return; // Skip URL processing for normal URLs
     }
 
