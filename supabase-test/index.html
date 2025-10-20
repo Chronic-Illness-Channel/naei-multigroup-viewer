@@ -333,7 +333,7 @@ async function loadData() {
   const [pollutantsResp, groupsResp, dataResp] = await Promise.all([
     supabase.from('NAEI_global_Pollutants').select('*'),
     supabase.from('NAEI_global_t_Group').select('*'),
-    supabase.from('NAEI_2023ds_t_Group_Data').select('*').range(0, 4999)  // Fetch rows 0-4999 (up to 5000 total)
+    supabase.from('NAEI_2023ds_t_Group_Data').select('*')  // Now fetches all rows due to project setting
   ]);
 
   if (pollutantsResp.error) throw pollutantsResp.error;
@@ -364,8 +364,7 @@ async function loadData() {
     if (title) groupIdToTitle[id] = title;
   });
   
-  console.log('Sample groupIdToTitle mapping:', Object.fromEntries(Object.entries(groupIdToTitle).slice(0, 5)));
-  console.log('Sample pollutantIdToName mapping:', Object.fromEntries(Object.entries(pollutantIdToName).slice(0, 5)));
+
 
   // Build lists used for dropdowns
   allPollutants = [...new Set(Object.values(pollutantIdToName).filter(Boolean))].sort();
@@ -398,33 +397,15 @@ async function loadData() {
 
   // Build groupedData using FK ids and the lookup maps
   groupedData = {};
-  let matchedRows = 0;
-  let skippedRows = 0;
-  
-  rows.forEach((r, idx) => {
+  rows.forEach(r => {
     const polId = r.Pollutant_id ?? r.pollutant_id ?? r.PollutantId ?? r.pollutantid;
     const grpId = r.Group_id ?? r.group_id ?? r.GroupId ?? r.groupid;
     const polName = pollutantIdToName[polId];
     const grpName = groupIdToTitle[grpId];
-    
-    if (idx < 3) {
-      console.log(`Sample row ${idx}:`, { polId, grpId, polName, grpName });
-    }
-    
-    if (!polName || !grpName) {
-      skippedRows++;
-      if (skippedRows < 5) {
-        console.warn(`Skipped row ${idx}: polId=${polId} -> ${polName}, grpId=${grpId} -> ${grpName}`);
-      }
-      return;
-    }
-    
-    matchedRows++;
+    if (!polName || !grpName) return;
     if (!groupedData[polName]) groupedData[polName] = {};
     groupedData[polName][grpName] = r;
   });
-  
-  console.log(`Matched ${matchedRows} rows, skipped ${skippedRows} rows out of ${rows.length} total`);
 
   // If the groups table didn't provide titles (or permissions prevented access), fall back to groups
   // discovered in the timeseries rows themselves
