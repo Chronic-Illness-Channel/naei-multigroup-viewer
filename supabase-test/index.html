@@ -1145,7 +1145,7 @@ async function init(){
 
       // Set default pollutant
       const pollutantSelect = document.getElementById("pollutantSelect");
-      if (pollutantSelect.querySelector("option[value="PM2.5"]")) {
+      if (pollutantSelect.querySelector("option[value=\"PM2.5\"]")) {
         pollutantSelect.value = "PM2.5";
       }
 
@@ -1300,7 +1300,8 @@ async function init(){
         content.classList.add("loaded");
         setTimeout(() => updateChart(), 200);
       }, 50);
-    }, 400);    });  } catch (err) {    console.error("❌ Initialization failed:", err);
+    }, 400);
+  } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
   }
