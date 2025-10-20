@@ -617,14 +617,8 @@ function setupSelectors(){
   startSel.addEventListener('change', updateChart);
   endSel.addEventListener('change', updateChart);
 
-  // If no group selector exists yet, create one so users can pick a group immediately.
-  // Prefer 'All' if present, else the first available group.
-  const existing = document.querySelectorAll('#groupContainer select');
-  if ((!existing || existing.length === 0) && (window.allGroupsList && window.allGroupsList.length)) {
-    const preferred = window.allGroupsList.find(g => g.toLowerCase() === 'all') || window.allGroupsList[0];
-    console.log('setupSelectors: auto-adding initial group selector with:', preferred);
-    addGroupSelector(preferred, false);
-  }
+  // Group selectors will be added by the init() function after URL parameter processing
+  // This prevents double group creation that causes visual jumping
  }
 
 function getSelectedGroups(){ return [...document.querySelectorAll('#groupContainer select')].map(s => s.value).filter(Boolean); }
@@ -1157,30 +1151,8 @@ async function init(){
     // --- Load all data once ---
     await Promise.all([loadUnits(), loadData()]);
 
-    // Hide all form elements during setup to prevent any visible DOM changes
-    const elementsToHide = [
-      document.getElementById("pollutantSelect"),
-      document.getElementById("groupContainer"),
-      document.getElementById("startYear"),
-      document.getElementById("endYear")
-    ].filter(el => el); // Remove any null elements
-    
-    elementsToHide.forEach(el => {
-      el.style.visibility = "hidden";
-      el.style.opacity = "0";
-    });
-
     // --- Populate dropdowns ---
     setupSelectors();
-
-    // Allow DOM to settle after all manipulations
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Restore visibility for all hidden elements
-    elementsToHide.forEach(el => {
-      el.style.visibility = "visible";
-      el.style.opacity = "1";
-    });
 
     // Check if this is a shared URL that needs processing
     const urlParams = parseUrlParameters();
