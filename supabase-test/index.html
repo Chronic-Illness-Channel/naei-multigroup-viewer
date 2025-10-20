@@ -37,7 +37,7 @@
     select, button { margin:6px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
     
     /* Ensure buttons match v1 styling exactly - force override */
-    #downloadBtn, #toggleSmoothBtn, #downloadCSVBtn, #downloadXLSXBtn, #shareBtn {
+    #downloadBtn, #toggleSmoothBtn, #downloadCSVBtn, #downloadXLSXBtn, #shareBtn, .add-btn, .remove-btn {
       background: #EFEFEF !important;
       cursor: pointer !important;
       margin: 6px !important;
@@ -49,9 +49,23 @@
       color: inherit !important;
     }
     
-    #downloadBtn:hover, #toggleSmoothBtn:hover, #downloadCSVBtn:hover, #downloadXLSXBtn:hover, #shareBtn:hover {
+    #downloadBtn:hover, #toggleSmoothBtn:hover, #downloadCSVBtn:hover, #downloadXLSXBtn:hover, #shareBtn:hover, .add-btn:hover, .remove-btn:hover {
       background: #E0E0E0 !important;
-    }    }    #groupContainer { margin-top:10px; }
+    }
+    
+    /* Ensure select dropdowns match v1 styling exactly */
+    select, #pollutantSelect, #startYear, #endYear, #groupContainer select {
+      margin: 6px !important;
+      padding: 6px 10px !important;
+      border-radius: 6px !important;
+      border: 1px solid #ccc !important;
+      background: #fff !important;
+      font-family: system-ui, sans-serif !important;
+      font-size: inherit !important;
+      color: inherit !important;
+    }
+    
+    #groupContainer { margin-top:10px; }
     .groupRow { display:flex; align-items:center; gap:8px; margin:4px 0; }
     .groupRow.dragging { opacity:0.5; }
     .dragHandle { cursor:grab; user-select:none; padding:4px 6px; background:#f0f0f0; border-radius:6px; }
