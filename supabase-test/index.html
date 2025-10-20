@@ -84,22 +84,8 @@
     .spinner { width:72px; height:72px; border-radius:50%; background: conic-gradient(#E6194B 0deg 120deg,#F58231 120deg 240deg,#FFE119 240deg 360deg); animation:spin 1.25s linear infinite; box-shadow:0 0 12px rgba(0,0,0,0.08); }
     @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
     .loading-text { margin-top:12px; color:#333; font-weight:600; }
-    #mainContent { 
-      display:none; 
-      opacity:0; 
-      visibility:hidden; 
-      position:absolute; 
-      top:-9999px; 
-      left:-9999px;
-      transition:opacity .4s ease; 
-    }
-    #mainContent.loaded { 
-      opacity:1; 
-      visibility:visible; 
-      position:static; 
-      top:auto; 
-      left:auto; 
-    }
+    #mainContent { display:none; opacity:0; transition:opacity .4s ease; }
+    #mainContent.loaded { opacity:1; }
     /* Fix cursor for clickable summary elements */
     details summary { cursor: pointer; user-select: none; }
     details summary::-webkit-details-marker { cursor: pointer; }
@@ -1197,27 +1183,19 @@ async function init(){
       document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
       document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-      // Ensure all CSS and layout processing is complete before showing UI
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const overlay = document.getElementById("loadingOverlay");
-          const content = document.getElementById("mainContent");
-          overlay.style.opacity = "0";
-          setTimeout(() => {
-            overlay.style.display = "none";
-            content.style.display = "block";
-            content.style.visibility = "visible";
-            content.style.position = "static";
-            content.style.top = "auto";
-            content.style.left = "auto";
-            document.body.classList.remove("loading"); // Allow body scroll/resize
-            setTimeout(() => {
-              content.classList.add("loaded");
-              setTimeout(() => updateChart(), 200);
-            }, 50);
-          }, 400);
-        });
-      });
+      // Use V1's exact simple pattern
+      const overlay = document.getElementById("loadingOverlay");
+      const content = document.getElementById("mainContent");
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+        content.style.display = "block";
+        document.body.classList.remove("loading"); // Allow body scroll/resize
+        setTimeout(() => {
+          content.classList.add("loaded");
+          setTimeout(() => updateChart(), 200);
+        }, 50);
+      }, 400);
       return; // Skip URL processing for normal URLs
     }
 
@@ -1344,27 +1322,19 @@ async function init(){
     document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
     document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-    // Ensure all CSS and layout processing is complete before showing UI
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const overlay = document.getElementById("loadingOverlay");
-        const content = document.getElementById("mainContent");
-        overlay.style.opacity = "0";
-        setTimeout(() => {
-          overlay.style.display = "none";
-          content.style.display = "block";
-          content.style.visibility = "visible";
-          content.style.position = "static";
-          content.style.top = "auto";
-          content.style.left = "auto";
-          document.body.classList.remove("loading"); // Allow body scroll/resize
-          setTimeout(() => {
-            content.classList.add("loaded");
-            setTimeout(() => updateChart(), 200);
-          }, 50);
-        }, 400);
-      });
-    });
+    // Use V1's exact simple pattern
+    const overlay = document.getElementById("loadingOverlay");
+    const content = document.getElementById("mainContent");
+    overlay.style.opacity = "0";
+    setTimeout(() => {
+      overlay.style.display = "none";
+      content.style.display = "block";
+      document.body.classList.remove("loading"); // Allow body scroll/resize
+      setTimeout(() => {
+        content.classList.add("loaded");
+        setTimeout(() => updateChart(), 200);
+      }, 50);
+    }, 400);
   } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
