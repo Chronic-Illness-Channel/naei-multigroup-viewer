@@ -419,6 +419,14 @@ async function loadData() {
   }
 
   console.log(`Loaded ${rows.length} timeseries rows; ${allPollutants.length} pollutants; ${allGroups.length} groups`);
+  
+  // Debug: Check which groups have data vs which don't
+  console.log('Groups with data:', groupsFromData.sort());
+  console.log('All groups from NAEI_global_t_Group:', allGroups.sort());
+  const groupsWithoutData = allGroups.filter(g => !groupsFromData.includes(g));
+  if (groupsWithoutData.length > 0) {
+    console.warn('Groups without data:', groupsWithoutData);
+  }
 }
 
 
