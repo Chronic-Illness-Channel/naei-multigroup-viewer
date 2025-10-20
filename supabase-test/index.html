@@ -292,6 +292,7 @@
 	  <button id="toggleSmoothBtn">🚫 Disable Smoothing</button>
 	  <button id="downloadCSVBtn">📄 Download Data - CSV</button>
 	  <button id="downloadXLSXBtn">📊 Download Data - Excel</button>
+	  <button id="shareBtn">🔗 Share Chart</button>
 	  
     </div>
 
@@ -414,6 +415,8 @@ let globalRows=[], globalHeaders=[], pollutantUnits={}, groupedData={};
 let allGroupsList = [];
 let allPollutants = [];
 let allGroups = [];
+let pollutantsData = []; // Store raw pollutant data for ID lookups
+let groupsData = []; // Store raw group data for ID lookups
 
 const distinctPalette=['#E6194B','#3CB44B','#FFE119','#4363D8','#F58231','#911EB4','#46F0F0','#F032E6','#BCF60C','#FABEBE'];
 const categoryBaseColor={ecodesign:distinctPalette[4],fireplace:distinctPalette[0],gas:distinctPalette[3],power:distinctPalette[1],road:distinctPalette[6]};
@@ -485,6 +488,10 @@ async function loadData() {
   const pollutants = pollutantsResp.data || [];
   const groups = groupsResp.data || [];
   const rows = dataResp.data || [];
+  
+  // Store globally for URL parameter lookups
+  pollutantsData = pollutants;
+  groupsData = groups;
 
   // Build ID -> name maps for joins
   const pollutantIdToName = {};
@@ -1077,6 +1084,25 @@ function setupDownloadButton() {
   });
 }
 /* ---------------- Initialization ---------------- */
+// Parse URL parameters for shared configurations
+function parseUrlParameters() {
+  const params = new URLSearchParams(window.location.search);
+  const result = {};
+  
+  // Get pollutant ID
+  if (params.has('pollutant_id')) {
+    result.pollutant_id = params.get('pollutant_id');
+  }
+  
+  // Get group IDs (can be comma-separated)
+  if (params.has('group_ids')) {
+    const groupIds = params.get('group_ids');
+    result.group_ids = groupIds.split(',').map(id => id.trim()).filter(id => id);
+  }
+  
+  return result;
+}
+
 async function init(){
   try {
     console.log("🔄 Initializing Supabase data...");
@@ -1095,36 +1121,94 @@ async function init(){
     // --- Populate dropdowns ---
     setupSelectors();
 
+    // --- Check for URL parameters to auto-load shared configuration ---
+    const urlParams = parseUrlParameters();
+    
     const pollutantSelect = document.getElementById('pollutantSelect');
-    const pm25 = pollutantSelect.querySelector('option[value="PM2.5"]');
-    if (pm25) pollutantSelect.value = "PM2.5";
-    else if (pollutantSelect.options.length > 1) pollutantSelect.selectedIndex = 1;
-
-    // Determine initial group to add:
-    let firstGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all")
-      || (window.allGroupsList?.[0] || "");
-
-    // If group list is empty or doesn't contain "All", fall back to groups discovered in groupedData
-    if (!firstGroup) {
-      // try groups for selected pollutant first
-      const chosenPoll = pollutantSelect.value || window.allPollutants?.[0];
-      const groupsForPoll = chosenPoll ? Object.keys(groupedData[chosenPoll] || {}) : [];
-      firstGroup = groupsForPoll[0] || (Object.values(groupedData).flatMap(p => Object.keys(p))[0] || "");
-    }
-
-    // If still no firstGroup but there's at least one group in window.allGroupsList, use that
-    if (!firstGroup && window.allGroupsList && window.allGroupsList.length) {
-      firstGroup = window.allGroupsList[0];
-    }
-
-    // Add a selector only if there isn't one already
-    if (document.querySelectorAll('#groupContainer select').length === 0) {
-      if (firstGroup) addGroupSelector(firstGroup, false);
-      else addGroupSelector("", true);
+    
+    // Set pollutant from URL or default to PM2.5
+    if (urlParams.pollutant_id) {
+      // Find pollutant name by ID
+      const pollutantData = pollutantsData.find(pd => 
+        pd.id === parseInt(urlParams.pollutant_id)
+      );
+      
+      if (pollutantData) {
+        const pollutantName = pollutantData.Pollutant || pollutantData.pollutant;
+        if (pollutantName) {
+          pollutantSelect.value = pollutantName;
+          console.log(`🔗 Loaded pollutant from URL: ${pollutantName} (ID: ${urlParams.pollutant_id})`);
+          
+          // Track shared URL usage
+          trackAnalytics('shared_url_load', {
+            pollutant_id: urlParams.pollutant_id,
+            pollutant_name: pollutantName,
+            group_ids: urlParams.group_ids || 'none'
+          });
+        }
+      }
     } else {
-      // If selector exists but has no selection, try to set it
-      const existingSel = document.querySelector('#groupContainer select');
-      if (existingSel && !existingSel.value && firstGroup) existingSel.value = firstGroup;
+      // Default behavior
+      const pm25 = pollutantSelect.querySelector('option[value="PM2.5"]');
+      if (pm25) pollutantSelect.value = "PM2.5";
+      else if (pollutantSelect.options.length > 1) pollutantSelect.selectedIndex = 1;
+    }
+
+    // Handle group selection from URL or use defaults
+    const groupContainer = document.getElementById('groupContainer');
+    
+    if (urlParams.group_ids && urlParams.group_ids.length > 0) {
+      // Load groups from URL parameters
+      console.log(`🔗 Loading groups from URL: ${urlParams.group_ids.join(', ')}`);
+      
+      // Clear any existing group selectors
+      groupContainer.innerHTML = '';
+      
+      // Add group selectors for each ID in URL
+      urlParams.group_ids.forEach(groupId => {
+        const groupData = groupsData.find(gd => gd.id === parseInt(groupId));
+        if (groupData) {
+          const groupName = groupData.Group_Title || groupData.group_title;
+          if (groupName) {
+            addGroupSelector(groupName, false);
+          }
+        }
+      });
+      
+      // If no valid groups were found from IDs, fall back to default
+      if (groupContainer.querySelectorAll('select').length === 0) {
+        console.warn('🚫 No valid groups found from URL IDs, using default');
+        const defaultGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all") || (window.allGroupsList?.[0] || "");
+        if (defaultGroup) addGroupSelector(defaultGroup, false);
+        else addGroupSelector("", true);
+      }
+    } else {
+      // Default behavior when no URL groups
+      let firstGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all")
+        || (window.allGroupsList?.[0] || "");
+
+      // If group list is empty or doesn't contain "All", fall back to groups discovered in groupedData
+      if (!firstGroup) {
+        // try groups for selected pollutant first
+        const chosenPoll = pollutantSelect.value || window.allPollutants?.[0];
+        const groupsForPoll = chosenPoll ? Object.keys(groupedData[chosenPoll] || {}) : [];
+        firstGroup = groupsForPoll[0] || (Object.values(groupedData).flatMap(p => Object.keys(p))[0] || "");
+      }
+
+      // If still no firstGroup but there's at least one group in window.allGroupsList, use that
+      if (!firstGroup && window.allGroupsList && window.allGroupsList.length) {
+        firstGroup = window.allGroupsList[0];
+      }
+
+      // Add a selector only if there isn't one already
+      if (document.querySelectorAll('#groupContainer select').length === 0) {
+        if (firstGroup) addGroupSelector(firstGroup, false);
+        else addGroupSelector("", true);
+      } else {
+        // If selector exists but has no selection, try to set it
+        const existingSel = document.querySelector('#groupContainer select');
+        if (existingSel && !existingSel.value && firstGroup) existingSel.value = firstGroup;
+      }
     }
 
     // --- Chart will be drawn after UI is shown ---
@@ -1132,6 +1216,7 @@ async function init(){
     // --- Setup UI and show ---
     setupDownloadButton();
     setupSmoothingToggle();
+    setupShareButton(); // Setup share functionality
     setupInteractionTracking(); // Track UI interactions
     document.getElementById('downloadCSVBtn')
       .addEventListener('click', () => exportData('csv'));
@@ -1287,6 +1372,187 @@ function exportData(format = 'csv') {
     XLSX.writeFile(wb, `${safePollutant}_data.xlsx`);
   }
 }
+
+// Generate shareable URL with current configuration
+function generateShareUrl() {
+  const pollutantSelect = document.getElementById('pollutantSelect');
+  const selectedGroups = getSelectedGroups();
+  
+  if (!pollutantSelect.value || selectedGroups.length === 0) {
+    alert('Please select a pollutant and at least one group before sharing.');
+    return null;
+  }
+  
+  // Get pollutant ID
+  const pollutantData = pollutantsData.find(pd => 
+    (pd.Pollutant || pd.pollutant) === pollutantSelect.value
+  );
+  
+  if (!pollutantData) {
+    alert('Unable to find pollutant ID for sharing.');
+    return null;
+  }
+  
+  // Get group IDs
+  const groupIds = [];
+  selectedGroups.forEach(groupName => {
+    const groupData = groupsData.find(gd => 
+      (gd.Group_Title || gd.group_title) === groupName
+    );
+    if (groupData) {
+      groupIds.push(groupData.id);
+    }
+  });
+  
+  if (groupIds.length === 0) {
+    alert('Unable to find group IDs for sharing.');
+    return null;
+  }
+  
+  // Build URL
+  const baseUrl = window.location.origin + window.location.pathname;
+  const shareUrl = `${baseUrl}?pollutant_id=${pollutantData.id}&group_ids=${groupIds.join(',')}`;
+  
+  return shareUrl;
+}
+
+// Setup share button functionality
+function setupShareButton() {
+  const shareBtn = document.getElementById('shareBtn');
+  if (!shareBtn) return;
+  
+  shareBtn.addEventListener('click', () => {
+    const shareUrl = generateShareUrl();
+    if (!shareUrl) return;
+    
+    // Track share usage
+    trackAnalytics('share_button_click', {
+      pollutant: document.getElementById('pollutantSelect').value,
+      group_count: getSelectedGroups().length
+    });
+    
+    // Show share options
+    showShareDialog(shareUrl);
+  });
+}
+
+// Show share dialog with copy and email options
+function showShareDialog(shareUrl) {
+  const pollutantName = document.getElementById('pollutantSelect').value;
+  const selectedGroups = getSelectedGroups();
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  `;
+  
+  const title = `${pollutantName} - ${selectedGroups.join(', ')}`;
+  const description = `View ${pollutantName} emissions data for ${selectedGroups.length === 1 ? selectedGroups[0] : selectedGroups.length + ' groups'} using the NAEI Multi-Group Pollutant Viewer.`;
+  
+  content.innerHTML = `
+    <h3 style="margin: 0 0 16px 0; color: #333;">🔗 Share Chart</h3>
+    <p style="margin: 0 0 16px 0; color: #666;">Share this specific chart configuration:</p>
+    <p style="margin: 0 0 16px 0; font-weight: 600; color: #000;">${title}</p>
+    
+    <div style="margin: 16px 0;">
+      <label style="display: block; margin-bottom: 8px; font-weight: 600;">Shareable URL:</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="shareUrlInput" value="${shareUrl}" readonly 
+               style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #f9f9f9;">
+        <button id="copyUrlBtn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+          📋 Copy
+        </button>
+      </div>
+    </div>
+    
+    <div style="margin: 16px 0;">
+      <button id="emailShareBtn" style="padding: 12px 20px; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
+        📧 Email Link
+      </button>
+      <button id="closeShareBtn" style="padding: 12px 20px; background: #666; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+        ❌ Close
+      </button>
+    </div>
+  `;
+  
+  dialog.appendChild(content);
+  document.body.appendChild(dialog);
+  
+  // Copy URL functionality
+  content.querySelector('#copyUrlBtn').addEventListener('click', async () => {
+    const input = content.querySelector('#shareUrlInput');
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      const btn = content.querySelector('#copyUrlBtn');
+      btn.textContent = '✅ Copied!';
+      btn.style.background = '#4CAF50';
+      
+      trackAnalytics('share_url_copied', {
+        pollutant: pollutantName,
+        group_count: selectedGroups.length
+      });
+      
+      setTimeout(() => {
+        btn.textContent = '📋 Copy';
+        btn.style.background = '#4CAF50';
+      }, 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      input.select();
+      document.execCommand('copy');
+      alert('URL copied to clipboard!');
+    }
+  });
+  
+  // Email sharing functionality
+  content.querySelector('#emailShareBtn').addEventListener('click', () => {
+    const subject = encodeURIComponent(`NAEI Data: ${title}`);
+    const body = encodeURIComponent(`${description}\n\nView the chart here: ${shareUrl}\n\nGenerated by the NAEI Multi-Group Pollutant Viewer`);
+    const mailto = `mailto:?subject=${subject}&body=${body}`;
+    
+    trackAnalytics('share_email_opened', {
+      pollutant: pollutantName,
+      group_count: selectedGroups.length
+    });
+    
+    window.location.href = mailto;
+  });
+  
+  // Close dialog
+  const closeDialog = () => {
+    document.body.removeChild(dialog);
+  };
+  
+  content.querySelector('#closeShareBtn').addEventListener('click', closeDialog);
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) closeDialog();
+  });
+  
+  // Focus the URL input for easy copying
+  setTimeout(() => {
+    content.querySelector('#shareUrlInput').select();
+  }, 100);
+}
+
 async function loadGroupInfo() {
   try {
     // Fetch group information and NFR codes from Supabase
