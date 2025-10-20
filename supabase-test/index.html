@@ -23,45 +23,7 @@
 	  z-index: 100;
 	}
 	
-    /* Main title styling with natural wrapping */
-    h2:first-of-type {
-      margin-top: 0;
-      margin-bottom: 20px;
-      font-size: 28px;
-      font-weight: 700;
-      line-height: 1.3;
-      padding-right: 100px; /* Space for logo on all screens */
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    
-    /* Mobile and tablet styles */
-    @media (max-width: 768px) {
-      h2:first-of-type {
-        font-size: 22px;
-        line-height: 1.4;
-        padding-right: 0; /* Remove padding since we have controlled line break */
-        margin-top: 5px;
-        margin-bottom: 15px;
-        text-align: center; /* Center the title on mobile */
-      }
-      
-      #cicLogo {
-        width: 60px; /* Smaller logo on mobile */
-        top: 5px;
-        right: 5px;
-      }
-    }
-    
-    /* Very small screens */
-    @media (max-width: 480px) {
-      h2:first-of-type {
-        font-size: 20px;
-        line-height: 1.5;
-        padding-right: 0; /* Remove padding since we have controlled line break */
-        margin-top: 2px;
-        text-align: center; /* Center the title on small mobile too */
-      }
+    h2 { margin-bottom:8px; }    
       
       #cicLogo {
         width: 50px;
@@ -167,7 +129,7 @@
 
 
   <div id="mainContent" aria-hidden="true">
-    <h2>NAEI Multi-Group<br>Pollutant Viewer</h2>
+    <h2>NAEI Multi-Group Pollutant Viewer</h2>
 <details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
   <summary class="cursor-pointer text-lg font-semibold text-blue-700 hover:text-blue-900">
     🧭 How to Use the NAEI Multi-Group Pollutant Viewer
@@ -1295,17 +1257,20 @@ async function init(){
     document.getElementById('downloadXLSXBtn')
       .addEventListener('click', () => exportData('xlsx'));
 
-    const overlay = document.getElementById('loadingOverlay');
-    const content = document.getElementById('mainContent');
-    overlay.style.opacity = '0';
+    const overlay = document.getElementById("loadingOverlay");
+    const content = document.getElementById("mainContent");
+    overlay.style.opacity = "0";
     setTimeout(() => {
-      overlay.style.display = 'none';
-      content.style.display = 'block';
-      content.removeAttribute('aria-hidden'); // Fix accessibility warning
-      setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
+      overlay.style.display = "none";
+      content.style.display = "block";
+      content.removeAttribute("aria-hidden");
+      setTimeout(() => {
+        content.classList.add("loaded");
+        setTimeout(() => updateChart(), 200);
+      }, 50);
     }, 400);
-  } catch (err) {
-    console.error("❌ Initialization failed:", err);
+
+  } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
   }
