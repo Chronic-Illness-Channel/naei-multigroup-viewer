@@ -333,7 +333,7 @@ async function loadData() {
   const [pollutantsResp, groupsResp, dataResp] = await Promise.all([
     supabase.from('NAEI_global_Pollutants').select('*'),
     supabase.from('NAEI_global_t_Group').select('*'),
-    supabase.from('NAEI_2023ds_t_Group_Data').select('*').limit(5000)  // Fetch all 3174 rows
+    supabase.from('NAEI_2023ds_t_Group_Data').select('*').range(0, 4999)  // Fetch rows 0-4999 (up to 5000 total)
   ]);
 
   if (pollutantsResp.error) throw pollutantsResp.error;
