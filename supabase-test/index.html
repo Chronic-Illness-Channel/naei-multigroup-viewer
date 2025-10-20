@@ -36,7 +36,6 @@
     }
 	
     select, button { margin:6px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
-    h2 { margin-bottom:8px; }
     #groupContainer { margin-top:10px; }
     .groupRow { display:flex; align-items:center; gap:8px; margin:4px 0; }
     .groupRow.dragging { opacity:0.5; }
@@ -1257,6 +1256,8 @@ async function init(){
     document.getElementById('downloadXLSXBtn')
       .addEventListener('click', () => exportData('xlsx'));
 
+
+    // === SHOW UI - All setup complete ===
     const overlay = document.getElementById("loadingOverlay");
     const content = document.getElementById("mainContent");
     overlay.style.opacity = "0";
@@ -1269,7 +1270,6 @@ async function init(){
         setTimeout(() => updateChart(), 200);
       }, 50);
     }, 400);
-
   } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
