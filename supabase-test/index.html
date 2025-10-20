@@ -1164,7 +1164,7 @@ async function init(){
     });
     
     // --- Load all data once ---
-    await Promise.all([loadUnits(), loadData()]);
+    await Promise.all([loadUnits(), loadData(), loadGroupInfo()]);
 
     // --- Populate dropdowns ---
     setupSelectors();
@@ -2073,8 +2073,6 @@ async function loadGroupInfo() {
       "<p class='text-red-600'>⚠️ Could not load group or NFRCodes information.</p>";
   }
 }
-document.addEventListener('DOMContentLoaded', loadGroupInfo);
-
 document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
 </script>
 </body>
