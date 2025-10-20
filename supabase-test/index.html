@@ -45,6 +45,9 @@
     .loading-text { margin-top:12px; color:#333; font-weight:600; }
     #mainContent { display:none; opacity:0; transition:opacity .4s ease; }
     #mainContent.loaded { opacity:1; }
+    /* Fix cursor for clickable summary elements */
+    details summary { cursor: pointer; user-select: none; }
+    details summary::-webkit-details-marker { cursor: pointer; }
 	/* --- Legend dot alignment fix --- */
 	#customLegend {
 	  margin-top: 10px;
