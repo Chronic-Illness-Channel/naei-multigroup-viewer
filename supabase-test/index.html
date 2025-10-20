@@ -1030,38 +1030,61 @@ async function loadGroupInfo() {
     if (error) throw error;
 
     console.log('Loaded groups from Supabase:', groupsData?.length || 0);
+    console.log('Sample group data:', groupsData?.[0]);
 
-    // Use the groups data from Supabase to build a simplified display
-    const uniqueGroupNames = [...new Set(groupsData?.map(g => g.Group_Name || g.group_name || g.Group || g.group).filter(Boolean))];
-    uniqueGroupNames.sort((a, b) => {
-      if (a.toLowerCase() === "all") return -1;
-      if (b.toLowerCase() === "all") return 1;
-      return a.localeCompare(b);
+    // Fetch CSV from GitHub (works in both local and hosted environments)
+    const response = await fetch('https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/main/Groups-NAEI_mulitgroup_viewer.csv');
+    if (!response.ok) throw new Error('Failed to fetch CSV file from GitHub');
+    const text = await response.text();
+    const lines = text.trim().split(/\r?\n/);
+    const headers = lines.shift().split(',').map(h => h.trim().toLowerCase());
+
+    const titleIdx = headers.findIndex(h => h.includes('group_title'));
+    const sourceIdx = headers.findIndex(h => h.includes('source'));
+    const activityIdx = headers.findIndex(h => h.includes('activity'));
+
+    const groups = lines.map(line => {
+      const cells = line.split(',').map(c => c.trim());
+      return {
+        name: cells[titleIdx] || "",
+        sources: (cells[sourceIdx] || "").split(';').map(s => s.trim()).filter(Boolean),
+        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean)
+      };
+    }).filter(g => g.name);
+
+    groups.sort((a, b) => {
+      if (a.name.toLowerCase() === "all") return -1;
+      if (b.name.toLowerCase() === "all") return 1;
+      return a.name.localeCompare(b.name);
     });
 
-    // --- Build HTML output ---
+    // --- Build HTML table like main version ---
     let html = `
-      <div style="font-family:inherit;font-size:14px;color:#000;">
-        <h3 style="margin-bottom:16px;">Available Groups (${uniqueGroupNames.length})</h3>
-        <p style="margin-bottom:12px;">Groups available in the Supabase database:</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;">
+      <table id="groupTable" style="border-collapse:collapse;width:100%;font-family:inherit;font-size:14px;color:#000;">
+        <thead>
+          <tr style="background:#d0d0d0;">
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:25%;">Group Name</th>
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:40%;">Sources</th>
+            <th style="border:1px solid #444;padding:8px;text-align:left;vertical-align:top;width:35%;">Fuel Types (Activity in NAEI data)</th>
+          </tr>
+        </thead>
+        <tbody>
     `;
 
-    uniqueGroupNames.forEach(groupName => {
+    groups.forEach(g => {
+      const sourcesHTML = g.sources.length ? g.sources.join('\n') : 'All Sources';
+      const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
+
       html += `
-        <div style="padding:8px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;">
-          ${groupName}
-        </div>
+        <tr style="border:1px solid #444;">
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${g.name}</td>
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${sourcesHTML}</td>
+          <td style="border:1px solid #444;padding:8px;white-space:pre-line;font-family:inherit;">${activitiesText}</td>
+        </tr>
       `;
     });
 
-    html += `
-        </div>
-        <p style="font-size:12px;color:#666;font-style:italic;">
-          This is the Supabase test version. Group metadata is loaded directly from the database.
-        </p>
-      </div>
-    `;
+    html += "</tbody></table>";
 
     const container = document.getElementById('group-info');
     container.style.fontFamily = 'system-ui, sans-serif';
