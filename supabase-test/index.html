@@ -924,12 +924,7 @@ async function init(){
       if (existingSel && !existingSel.value && firstGroup) existingSel.value = firstGroup;
     }
 
-    // --- Draw chart once data ready if pollutant and group available ---
-    if (pollutantSelect.value && getSelectedGroups().length) {
-      console.log("✅ Drawing initial chart:", pollutantSelect.value, getSelectedGroups()[0]);
-      await new Promise(r => setTimeout(r, 400));
-      updateChart();
-    }
+    // --- Chart will be drawn after UI is shown ---
 
     // --- Setup UI and show ---
     setupDownloadButton();
@@ -1158,9 +1153,7 @@ async function loadGroupInfo() {
 }
 document.addEventListener('DOMContentLoaded', loadGroupInfo);
 
-
-// Wait until Google Charts library is ready, then run init
-google.charts.setOnLoadCallback(init);
+document.addEventListener('DOMContentLoaded', () => google.charts.setOnLoadCallback(init));
 </script>
 </body>
 </html>
