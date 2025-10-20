@@ -268,6 +268,68 @@ const SUPABASE_URL = 'https://vhplzwzzkeueyelaqftl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZocGx6d3p6a2V1ZXllbGFxZnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NjQwODUsImV4cCI6MjA3NjA0MDA4NX0.mBAwFmfSpqffvp1GGDHKvp-y_hukSZmF4GN-Ghnf--o';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Analytics tracking
+let sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+let userFingerprint = null;
+
+// Generate a privacy-friendly user fingerprint
+function generateUserFingerprint() {
+  if (userFingerprint) return userFingerprint;
+  
+  // Collect non-invasive browser info for analytics
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'top';
+  ctx.font = '14px Arial';
+  ctx.fillText('Browser fingerprint', 2, 2);
+  const canvasData = canvas.toDataURL();
+  
+  const fingerprint = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width + 'x' + screen.height,
+    new Date().getTimezoneOffset(),
+    canvasData.slice(-50) // Just last 50 chars for basic uniqueness
+  ].join('|');
+  
+  // Hash it for privacy
+  userFingerprint = btoa(fingerprint).substr(0, 16);
+  return userFingerprint;
+}
+
+// Track analytics events
+async function trackAnalytics(eventType, eventData = {}) {
+  try {
+    const analyticsData = {
+      session_id: sessionId,
+      user_fingerprint: generateUserFingerprint(),
+      event_type: eventType,
+      event_data: eventData,
+      timestamp: new Date().toISOString(),
+      user_agent: navigator.userAgent,
+      page_url: window.location.href,
+      referrer: document.referrer || null
+    };
+    
+    // Only send if we have a valid event type
+    if (!eventType) return;
+    
+    console.log('📊 Analytics:', eventType, eventData);
+    
+    // Store in Supabase analytics table
+    const { error } = await supabase
+      .from('analytics_events')
+      .insert([analyticsData]);
+    
+    if (error && !error.message?.includes('relation "analytics_events" does not exist')) {
+      console.warn('Analytics tracking failed:', error);
+    }
+  } catch (err) {
+    // Silently fail - don't break the app for analytics
+    console.warn('Analytics error:', err);
+  }
+}
+
 let globalRows=[], globalHeaders=[], pollutantUnits={}, groupedData={};
 let allGroupsList = [];
 let allPollutants = [];
@@ -607,6 +669,16 @@ function updateChart(){
   const groups = getSelectedGroups();
   if (!pollutant || !startYear || !endYear || !groups.length) return;
 
+  // Track chart view analytics
+  trackAnalytics('chart_view', {
+    pollutant: pollutant,
+    start_year: startYear,
+    end_year: endYear,
+    groups: groups,
+    groups_count: groups.length,
+    year_range: endYear - startYear + 1
+  });
+
   resetColorSystem();
   // Use the global year keys to determine which years to display
   const yearsAll = window.globalYears || [];
@@ -759,6 +831,19 @@ function setupDownloadButton() {
     const pollutant = document.getElementById('pollutantSelect').value;
     if (!chart || !pollutant) return;
 
+    // Track chart download analytics
+    const selectedGroups = getSelectedGroups();
+    const startYear = +document.getElementById('startYear').value;
+    const endYear = +document.getElementById('endYear').value;
+    trackAnalytics('chart_download', {
+      pollutant: pollutant,
+      start_year: startYear,
+      end_year: endYear,
+      groups: selectedGroups,
+      groups_count: selectedGroups.length,
+      filename: pollutant.replace(/[^a-z0-9_\-]/gi, '_') + '_comparison.png'
+    });
+
     const unit = pollutantUnits[pollutant] || "";
     const imageURI = chart.getImageURI();
     const img = new Image();
@@ -863,12 +948,10 @@ function setupDownloadButton() {
 
       // --- Logo and footer ---
       const logo = new Image();
+      logo.crossOrigin = 'anonymous'; // Allow CORS for canvas export
       logo.src = 'CIC - Square - Border - Words - Alpha 360x360.png';
 
-      logo.onload = () => {
-        const logoSize = 80;
-        ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
-
+      const finishExport = () => {
         const footerText =
           "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
         const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
@@ -887,6 +970,22 @@ function setupDownloadButton() {
         link.click();
         link.remove();
       };
+
+      logo.onload = () => {
+        try {
+          const logoSize = 80;
+          ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
+          finishExport();
+        } catch (e) {
+          console.warn('Logo failed to draw, continuing without logo:', e);
+          finishExport();
+        }
+      };
+
+      logo.onerror = () => {
+        console.warn('Logo failed to load, continuing without logo');
+        finishExport();
+      };
     };
 
     img.onerror = (e) => {
@@ -901,6 +1000,15 @@ function setupDownloadButton() {
 async function init(){
   try {
     console.log("🔄 Initializing Supabase data...");
+    
+    // Track page load
+    trackAnalytics('page_load', {
+      version: 'v2.0-beta',
+      load_time: Date.now(),
+      screen_resolution: screen.width + 'x' + screen.height,
+      viewport: window.innerWidth + 'x' + window.innerHeight
+    });
+    
     // --- Load all data once ---
     await Promise.all([loadUnits(), loadData()]);
 
@@ -990,6 +1098,17 @@ function exportData(format = 'csv') {
     return;
   }
 
+  // Track export analytics
+  trackAnalytics('data_export', {
+    format: format,
+    pollutant: pollutant,
+    start_year: startYear,
+    end_year: endYear,
+    groups: selectedGroups,
+    groups_count: selectedGroups.length,
+    year_range: endYear - startYear + 1,
+    filename: pollutant.replace(/[^a-z0-9_\-]/gi, '_') + '_' + startYear + '-' + endYear + '_comparison'
+  });
 
   // Use the global year keys / labels determined earlier
   const yearsAll = window.globalYears || [];

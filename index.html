@@ -761,12 +761,10 @@ function setupDownloadButton() {
 
       // --- Logo and footer ---
       const logo = new Image();
+      logo.crossOrigin = 'anonymous'; // Allow CORS for canvas export
       logo.src = 'CIC - Square - Border - Words - Alpha 360x360.png';
 
-      logo.onload = () => {
-        const logoSize = 80;
-        ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
-
+      const finishExport = () => {
         const footerText =
           "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
         const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
@@ -784,6 +782,22 @@ function setupDownloadButton() {
         document.body.appendChild(link);
         link.click();
         link.remove();
+      };
+
+      logo.onload = () => {
+        try {
+          const logoSize = 80;
+          ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
+          finishExport();
+        } catch (e) {
+          console.warn('Logo failed to draw, continuing without logo:', e);
+          finishExport();
+        }
+      };
+
+      logo.onerror = () => {
+        console.warn('Logo failed to load, continuing without logo');
+        finishExport();
       };
     };
 
