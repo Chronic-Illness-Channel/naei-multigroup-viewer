@@ -977,7 +977,15 @@ function exportData(format = 'csv') {
   const startYear = +document.getElementById('startYear').value;
   const endYear = +document.getElementById('endYear').value;
   const selectedGroups = getSelectedGroups();
+  
+  console.log('Export debug:', { pollutant, startYear, endYear, selectedGroups, globalHeadersLength: globalHeaders?.length });
+  
   if (!pollutant || !selectedGroups.length || !globalHeaders.length) {
+    console.warn('Export validation failed:', { 
+      hasPollutant: !!pollutant, 
+      hasGroups: selectedGroups.length > 0, 
+      hasHeaders: globalHeaders?.length > 0 
+    });
     alert('Please select a pollutant and at least one group first.');
     return;
   }
