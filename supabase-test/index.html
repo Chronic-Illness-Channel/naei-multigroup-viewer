@@ -1025,12 +1025,29 @@ function exportData(format = 'csv') {
 }
 async function loadGroupInfo() {
   try {
-    // Fetch group information from Supabase
-    const { data: groupsData, error } = await supabase.from('NAEI_global_t_Group').select('*');
-    if (error) throw error;
+    // Fetch group information and NFR codes from Supabase
+    const [groupsResp, nfrResp] = await Promise.all([
+      supabase.from('NAEI_global_t_Group').select('*'),
+      supabase.from('NAEI_global_t_NFRCode').select('*')
+    ]);
+
+    if (groupsResp.error) throw groupsResp.error;
+    if (nfrResp.error) throw nfrResp.error;
+
+    const groupsData = groupsResp.data || [];
+    const nfrData = nfrResp.data || [];
 
     console.log('Loaded groups from Supabase:', groupsData?.length || 0);
+    console.log('Loaded NFR codes from Supabase:', nfrData?.length || 0);
     console.log('Sample group data:', groupsData?.[0]);
+
+    // Build NFR code lookup map
+    const nfrMap = {};
+    nfrData.forEach(nfr => {
+      if (nfr.NFRCode && nfr.Description) {
+        nfrMap[nfr.NFRCode] = nfr.Description;
+      }
+    });
 
     // Process Supabase group data to aggregate by Group_Title
     const groupMap = {};
@@ -1091,7 +1108,8 @@ async function loadGroupInfo() {
         sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
         sourcesHTML += `<div style="white-space:pre-line;">`;
         g.nfrCodes.forEach(code => {
-          sourcesHTML += `${code}\t${code} (NFR Code)\n`;
+          const description = nfrMap[code] || "(Description not found)";
+          sourcesHTML += `${code}\t${description}\n`;
         });
         sourcesHTML += `</div>`;
       } else {
