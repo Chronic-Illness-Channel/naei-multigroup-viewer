@@ -1023,41 +1023,12 @@ function exportData(format = 'csv') {
   }
 }
 async function loadGroupInfo() {
-  const NFRCODE_SHEET_URL =
-    'https://docs.google.com/spreadsheets/d/1m0as8iV7quPhM5fg_8fJpzAEQh_LBBDFwnuzf71QJZM/gviz/tq?sheet=NFRCodes&tq=SELECT%20*';
-
   try {
-    const nfrRes = await fetch(NFRCODE_SHEET_URL);
-    const nfrTxt = await nfrRes.text();
+    // Fetch group information from Supabase
+    const { data: groupsData, error } = await supabase.from('NAEI_global_t_Group').select('*');
+    if (error) throw error;
 
-   // console.log("NFRCodes raw gviz response:", nfrTxt.slice(0, 500));
-
-    const jsonStart = nfrTxt.indexOf('{');
-    const jsonEnd = nfrTxt.lastIndexOf('}');
-    const nfrJson = JSON.parse(nfrTxt.substring(jsonStart, jsonEnd + 1));
-
-    const nfrMap = {};
-
-    if (nfrJson.table && nfrJson.table.rows && nfrJson.table.rows.length > 1) {
-      const firstRow = nfrJson.table.rows[0].c.map(c => c?.v?.toString().trim().toLowerCase());
-      console.log('Detected NFRCodes header row:', firstRow);
-
-      const codeIdx = firstRow.findIndex(c => c.includes('nfr_code'));
-      const descIdx = firstRow.findIndex(c => c.includes('desc'));
-      const dataRows = nfrJson.table.rows.slice(1);
-
-      dataRows.forEach(r => {
-        if (!r.c) return;
-        const codeCell = r.c[codeIdx];
-        const descCell = r.c[descIdx];
-        if (!codeCell || !descCell) return;
-
-        const code = codeCell.v?.toString().trim().replace(/\s+/g, '').toUpperCase();
-        const desc = descCell.v?.toString().trim();
-        if (code && desc) nfrMap[code] = desc;
-      });
-    }
-
+    // Use the CSV file for additional group metadata (fallback if needed)
     const response = await fetch('Groups-NAEI_mulitgroup_viewer.csv?cacheBust=' + Date.now());
     if (!response.ok) throw new Error('Failed to fetch CSV file');
     const text = await response.text();
@@ -1067,25 +1038,13 @@ async function loadGroupInfo() {
     const titleIdx = headers.findIndex(h => h.includes('group_title'));
     const sourceIdx = headers.findIndex(h => h.includes('source'));
     const activityIdx = headers.findIndex(h => h.includes('activity'));
-    const nfrIdx = headers.findIndex(h => h.includes('nfrcode'));
 
     const groups = lines.map(line => {
       const cells = line.split(',').map(c => c.trim());
-      const nfrCodes = nfrIdx !== -1
-        ? (cells[nfrIdx] || "").split(';').map(n => n.trim()).filter(Boolean)
-        : [];
-
-      const nfrDescriptions = nfrCodes.map(code => {
-        const lookupKey = code.toString().trim().replace(/\s+/g, '').toUpperCase();
-        const desc = nfrMap[lookupKey] || "(Description not found)";
-        return { code, desc };
-      });
-
       return {
         name: cells[titleIdx] || "",
         sources: (cells[sourceIdx] || "").split(';').map(s => s.trim()).filter(Boolean),
-        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean),
-        nfrDescriptions
+        activities: (cells[activityIdx] || "").split(';').map(a => a.trim()).filter(Boolean)
       };
     }).filter(g => g.name);
 
@@ -1109,20 +1068,7 @@ async function loadGroupInfo() {
     `;
 
     groups.forEach(g => {
-      let sourcesHTML = "";
-
-      if (g.nfrDescriptions.length) {
-        sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
-        // 👇 Removed monospace — inherits normal page font
-        sourcesHTML += `<div style="white-space:pre-line;">`;
-        g.nfrDescriptions.forEach(n => {
-          sourcesHTML += `${n.code}\t${n.desc}\n`;
-        });
-        sourcesHTML += `</div>`;
-      } else {
-        sourcesHTML = g.sources.length ? g.sources.join('\n') : 'All Sources';
-      }
-
+      const sourcesHTML = g.sources.length ? g.sources.join('\n') : 'All Sources';
       const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
 
       html += `
@@ -1137,12 +1083,9 @@ async function loadGroupInfo() {
     html += "</tbody></table>";
 
     const container = document.getElementById('group-info');
-
-    // ✅ Ensure container matches the main page font
     container.style.fontFamily = 'system-ui, sans-serif';
     container.style.fontSize = '14px';
     container.style.color = '#000';
-
     container.innerHTML = html;
 
   } catch (err) {
