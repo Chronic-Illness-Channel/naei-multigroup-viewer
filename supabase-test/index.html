@@ -1157,10 +1157,18 @@ async function init(){
     // --- Load all data once ---
     await Promise.all([loadUnits(), loadData()]);
 
-    // Ensure group container is completely hidden during setup to prevent jumping
-    const groupContainerEl = document.getElementById("groupContainer");
-    groupContainerEl.style.visibility = "hidden";
-    groupContainerEl.style.opacity = "0";
+    // Hide all form elements during setup to prevent any visible DOM changes
+    const elementsToHide = [
+      document.getElementById("pollutantSelect"),
+      document.getElementById("groupContainer"),
+      document.getElementById("startYear"),
+      document.getElementById("endYear")
+    ].filter(el => el); // Remove any null elements
+    
+    elementsToHide.forEach(el => {
+      el.style.visibility = "hidden";
+      el.style.opacity = "0";
+    });
 
     // --- Populate dropdowns ---
     setupSelectors();
@@ -1168,9 +1176,11 @@ async function init(){
     // Allow DOM to settle after all manipulations
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Restore visibility
-    groupContainerEl.style.visibility = "visible";
-    groupContainerEl.style.opacity = "1";
+    // Restore visibility for all hidden elements
+    elementsToHide.forEach(el => {
+      el.style.visibility = "visible";
+      el.style.opacity = "1";
+    });
 
     // Check if this is a shared URL that needs processing
     const urlParams = parseUrlParameters();
