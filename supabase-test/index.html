@@ -1130,9 +1130,42 @@ async function init(){
     // --- Populate dropdowns ---
     setupSelectors();
 
-    // --- Check for URL parameters to auto-load shared configuration ---
+    // Check if this is a shared URL that needs processing
     const urlParams = parseUrlParameters();
-    
+    const isSharedUrl = urlParams.pollutant_id || urlParams.group_ids || urlParams.start_year || urlParams.end_year;
+
+    // For normal URLs, show UI immediately after basic setup
+    if (!isSharedUrl) {
+      setupDownloadButton();
+      setupSmoothingToggle();
+      setupShareButton();
+      setupInteractionTracking();
+      document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
+      document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
+
+      // Set default pollutant
+      const pollutantSelect = document.getElementById("pollutantSelect");
+      if (pollutantSelect.querySelector("option[value="PM2.5"]")) {
+        pollutantSelect.value = "PM2.5";
+      }
+
+      // Show UI immediately for normal URLs
+      const overlay = document.getElementById("loadingOverlay");
+      const content = document.getElementById("mainContent");
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+        content.style.display = "block";
+        content.removeAttribute("aria-hidden");
+        setTimeout(() => {
+          content.classList.add("loaded");
+          setTimeout(() => updateChart(), 200);
+        }, 50);
+      }, 400);
+      return; // Skip URL processing for normal URLs
+    }
+
+    // --- Process shared URL parameters ---    
     const pollutantSelect = document.getElementById('pollutantSelect');
     
     // Set pollutant from URL or default to PM2.5
@@ -1245,35 +1278,29 @@ async function init(){
 
     // --- Chart will be drawn after UI is shown ---
 
-    // --- Setup UI and show ---
+
+
+    // === SHOW UI for shared URLs - after URL processing ===
     setupDownloadButton();
     setupSmoothingToggle();
-    setupShareButton(); // Setup share functionality
-    setupInteractionTracking(); // Track UI interactions
-    document.getElementById('downloadCSVBtn')
-      .addEventListener('click', () => exportData('csv'));
-    document.getElementById('downloadXLSXBtn')
-      .addEventListener('click', () => exportData('xlsx'));
+    setupShareButton();
+    setupInteractionTracking();
+    document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
+    document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-
-    // === SHOW UI - All setup complete ===
-    // Wait for all DOM updates to complete
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const overlay = document.getElementById("loadingOverlay");
-        const content = document.getElementById("mainContent");
-        overlay.style.opacity = "0";
-        setTimeout(() => {
-          overlay.style.display = "none";
-          content.style.display = "block";
-          content.removeAttribute("aria-hidden");
-          setTimeout(() => {
-            content.classList.add("loaded");
-            setTimeout(() => updateChart(), 200);
-          }, 50);
-        }, 400);
-      });
-    });  } catch (err) {    console.error("❌ Initialization failed:", err);
+    // Show UI after URL processing complete
+    const overlay = document.getElementById("loadingOverlay");
+    const content = document.getElementById("mainContent");
+    overlay.style.opacity = "0";
+    setTimeout(() => {
+      overlay.style.display = "none";
+      content.style.display = "block";
+      content.removeAttribute("aria-hidden");
+      setTimeout(() => {
+        content.classList.add("loaded");
+        setTimeout(() => updateChart(), 200);
+      }, 50);
+    }, 400);    });  } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
   }
