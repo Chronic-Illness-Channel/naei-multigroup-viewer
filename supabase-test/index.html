@@ -1182,21 +1182,18 @@ async function init(){
       document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
       document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-      // Show UI immediately for normal URLs - ALL DOM changes complete
+      // Show UI using V1's exact pattern
+      const overlay = document.getElementById("loadingOverlay");
+      const content = document.getElementById("mainContent");
+      overlay.style.opacity = "0";
       setTimeout(() => {
-        const overlay = document.getElementById("loadingOverlay");
-        const content = document.getElementById("mainContent");
-        overlay.style.opacity = "0";
+        overlay.style.display = "none";
+        content.style.display = "block";
         setTimeout(() => {
-          overlay.style.display = "none";
-          content.style.display = "block";
-          content.removeAttribute("aria-hidden");
-          setTimeout(() => {
-            content.classList.add("loaded");
-            setTimeout(() => updateChart(), 200);
-          }, 50);
-        }, 400);
-      }, 100);
+          content.classList.add("loaded");
+          setTimeout(() => updateChart(), 200);
+        }, 50);
+      }, 400);
       return; // Skip URL processing for normal URLs
     }
 
@@ -1323,14 +1320,13 @@ async function init(){
     document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
     document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-    // Show UI after URL processing complete
+    // Show UI using V1's exact pattern
     const overlay = document.getElementById("loadingOverlay");
     const content = document.getElementById("mainContent");
     overlay.style.opacity = "0";
     setTimeout(() => {
       overlay.style.display = "none";
       content.style.display = "block";
-      content.removeAttribute("aria-hidden");
       setTimeout(() => {
         content.classList.add("loaded");
         setTimeout(() => updateChart(), 200);
