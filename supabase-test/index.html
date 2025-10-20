@@ -1041,12 +1041,33 @@ function setupDownloadButton() {
       const finishExport = () => {
         const footerText =
           "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
+        const channelText = "Youtube Channel: youtube.com/@chronicillnesschannel";
         const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
 
         ctx.font = '12px system-ui, sans-serif';
         ctx.fillStyle = '#555';
         ctx.textAlign = 'center';
         ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
+        
+        // Draw YouTube channel with bold label
+        const channelY = legendY + img.height + 35;
+        const boldText = "Youtube Channel: ";
+        const normalText = "youtube.com/@chronicillnesschannel";
+        
+        // Measure text widths for positioning
+        ctx.font = 'bold 12px system-ui, sans-serif';
+        const boldWidth = ctx.measureText(boldText).width;
+        ctx.font = '12px system-ui, sans-serif';
+        const normalWidth = ctx.measureText(normalText).width;
+        const totalWidth = boldWidth + normalWidth;
+        
+        // Draw bold part
+        ctx.font = 'bold 12px system-ui, sans-serif';
+        ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
+        
+        // Draw normal part
+        ctx.font = '12px system-ui, sans-serif';
+        ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
 
         // --- Download ---
         const link = document.createElement('a');
@@ -1772,11 +1793,32 @@ async function generateChartImage() {
 
           const finishGeneration = () => {
             const footerText = "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
+            const channelText = "Youtube Channel: youtube.com/@chronicillnesschannel";
             
             ctx.font = '12px system-ui, sans-serif';
             ctx.fillStyle = '#555';
             ctx.textAlign = 'center';
             ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
+            
+            // Draw YouTube channel with bold label
+            const channelY = legendY + img.height + 35;
+            const boldText = "Youtube Channel: ";
+            const normalText = "youtube.com/@chronicillnesschannel";
+            
+            // Measure text widths for positioning
+            ctx.font = 'bold 12px system-ui, sans-serif';
+            const boldWidth = ctx.measureText(boldText).width;
+            ctx.font = '12px system-ui, sans-serif';
+            const normalWidth = ctx.measureText(normalText).width;
+            const totalWidth = boldWidth + normalWidth;
+            
+            // Draw bold part
+            ctx.font = 'bold 12px system-ui, sans-serif';
+            ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
+            
+            // Draw normal part
+            ctx.font = '12px system-ui, sans-serif';
+            ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
             
             const dataURL = canvas.toDataURL('image/png');
             resolve(dataURL);
