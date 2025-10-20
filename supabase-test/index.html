@@ -1541,7 +1541,7 @@ function showShareDialog(shareUrl) {
     <div style="margin: 16px 0;">
       <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
         <input type="checkbox" id="includeImageCheckbox" style="margin-right: 8px;">
-        <span style="font-weight: 600;">📊 Include chart image in email</span>
+        <span style="font-weight: 600;">� Copy chart image to clipboard for pasting into email</span>
       </label>
       
       <button id="emailShareBtn" style="padding: 12px 20px; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
@@ -1604,36 +1604,26 @@ function showShareDialog(shareUrl) {
         // Generate comprehensive chart image (same as PNG download)
         const chartImageData = await generateChartImage();
         
-        // Download the image automatically for easy attachment
-        const link = document.createElement('a');
-        const safeName = pollutantName.replace(/[^a-z0-9_\-]/gi, '_');
-        const filename = `${safeName}_${startYear || 'all'}_${endYear || 'years'}.png`;
-        link.download = filename;
-        link.href = chartImageData;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        
-        emailBody += `📊 Chart Image:\n`;
-        emailBody += `A high-quality chart image (${filename}) has been downloaded to your computer.\n`;
-        emailBody += `Please attach this file to your email - it includes the complete chart with title, legend, and CIC logo.\n\n`;
-        
-        // Also try to copy to clipboard as fallback
+        // Copy to clipboard
         if (navigator.clipboard && navigator.clipboard.write) {
-          try {
-            const blob = dataURLtoBlob(chartImageData);
-            const clipboardItem = new ClipboardItem({ 'image/png': blob });
-            await navigator.clipboard.write([clipboardItem]);
-            emailBody += `The image has also been copied to your clipboard as a backup.\n\n`;
-          } catch (clipboardError) {
-            console.warn('Clipboard copy failed:', clipboardError);
-          }
+          const blob = dataURLtoBlob(chartImageData);
+          const clipboardItem = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([clipboardItem]);
+          
+          emailBody += `� Chart Image:\n`;
+          emailBody += `The complete chart image (including title, legend, and CIC logo) has been copied to your clipboard.\n`;
+          emailBody += `You can now paste it directly into your email.\n\n`;
+        } else {
+          emailBody += `📋 Chart Image:\n`;
+          emailBody += `Your browser doesn't support automatic clipboard copying.\n`;
+          emailBody += `Please use the "⬇️ Download Chart as PNG" button to get the chart image.\n\n`;
         }
         
       } catch (error) {
         console.warn('Could not generate chart image:', error);
-        emailBody += `📊 Chart image could not be generated automatically.\n`;
-        emailBody += `Please use the "⬇️ Download Chart as PNG" button to get the chart image and attach it manually.\n\n`;
+        emailBody += `� Chart Image:\n`;
+        emailBody += `Chart image could not be generated automatically.\n`;
+        emailBody += `Please use the "⬇️ Download Chart as PNG" button to get the chart image.\n\n`;
       }
     }
     
