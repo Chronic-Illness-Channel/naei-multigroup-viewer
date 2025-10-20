@@ -321,6 +321,33 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // Analytics tracking
 let sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 let userFingerprint = null;
+let userCountry = null;
+
+// Get user's country (privacy-friendly timezone method)
+function getUserCountry() {
+  if (userCountry) return userCountry;
+  
+  try {
+    // Get timezone and map to likely country
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const locale = navigator.language || 'en';
+    
+    // Simple mapping for common cases (privacy-friendly approach)
+    const timezoneCountryMap = {
+      'Europe/London': 'GB',
+      'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+      'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT', 'Europe/Madrid': 'ES',
+      'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Kolkata': 'IN',
+      'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+      'America/Toronto': 'CA', 'America/Vancouver': 'CA'
+    };
+    
+    userCountry = timezoneCountryMap[timezone] || locale.split('-')[1] || 'Unknown';
+    return userCountry;
+  } catch (e) {
+    return 'Unknown';
+  }
+}
 
 // Generate a privacy-friendly user fingerprint
 function generateUserFingerprint() {
@@ -354,7 +381,10 @@ async function trackAnalytics(eventType, eventData = {}) {
       session_id: sessionId,
       user_fingerprint: generateUserFingerprint(),
       event_type: eventType,
-      event_data: eventData,
+      event_data: {
+        ...eventData,
+        country: getUserCountry()
+      },
       timestamp: new Date().toISOString(),
       user_agent: navigator.userAgent,
       page_url: window.location.href,
@@ -1102,6 +1132,7 @@ async function init(){
     // --- Setup UI and show ---
     setupDownloadButton();
     setupSmoothingToggle();
+    setupInteractionTracking(); // Track UI interactions
     document.getElementById('downloadCSVBtn')
       .addEventListener('click', () => exportData('csv'));
     document.getElementById('downloadXLSXBtn')
@@ -1122,6 +1153,47 @@ async function init(){
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
   }
 }
+
+function setupInteractionTracking() {
+  // Track "How to Use" section interactions
+  const howToUseDetails = document.querySelector('details');
+  if (howToUseDetails) {
+    howToUseDetails.addEventListener('toggle', () => {
+      if (howToUseDetails.open) {
+        trackAnalytics('ui_interaction', {
+          element: 'how_to_use_section',
+          action: 'opened'
+        });
+      }
+    });
+  }
+
+  // Track "Group Info" section interactions
+  const groupInfoDetails = document.querySelectorAll('details')[1]; // Second details element
+  if (groupInfoDetails) {
+    groupInfoDetails.addEventListener('toggle', () => {
+      if (groupInfoDetails.open) {
+        trackAnalytics('ui_interaction', {
+          element: 'group_info_section',
+          action: 'opened'
+        });
+      }
+    });
+  }
+
+  // Track smoothing toggle clicks
+  const smoothBtn = document.getElementById('toggleSmoothBtn');
+  if (smoothBtn) {
+    smoothBtn.addEventListener('click', () => {
+      trackAnalytics('ui_interaction', {
+        element: 'smoothing_toggle',
+        action: 'clicked',
+        new_state: !smoothLines ? 'enabled' : 'disabled'
+      });
+    });
+  }
+}
+
 function setupSmoothingToggle() {
   const btn = document.getElementById('toggleSmoothBtn');
   btn.addEventListener('click', () => {
