@@ -985,6 +985,7 @@ async function revealMainContent() {
 
   content.style.display = 'block';
   content.removeAttribute('aria-hidden');
+  requestAnimationFrame(() => content.classList.add('loaded'));
 
   await renderInitialView();
 
@@ -993,7 +994,6 @@ async function revealMainContent() {
   return new Promise(resolve => {
     setTimeout(() => {
       overlay.style.display = 'none';
-      requestAnimationFrame(() => content.classList.add('loaded'));
       resolve();
     }, 400);
   });
