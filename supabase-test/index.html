@@ -945,7 +945,7 @@ async function init(){
     setTimeout(() => {
       overlay.style.display = 'none';
       content.style.display = 'block';
-      setTimeout(() => content.classList.add('loaded'), 200);
+      setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
     }, 400);
   } catch (err) {
     console.error("❌ Initialization failed:", err);
