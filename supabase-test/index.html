@@ -23,14 +23,16 @@
 	  z-index: 100;
 	}
 	
-    h2 { margin-bottom:8px; width: 100%; display: block; }      
-      #cicLogo {
-        width: 50px;
-        width: 50px;
-      }
-      
+    h2 { margin-bottom:8px; width: 100%; display: block; }
+    
+    /* Mobile styles */
+    @media (max-width: 768px) {
       body {
         margin: 15px;
+      }
+      
+      #cicLogo {
+        width: 50px;
       }
     }
 	
@@ -45,7 +47,6 @@
       border-radius: 6px !important;
       border: 1px solid #ccc !important;
       font-family: system-ui, sans-serif !important;
-      font-size: inherit !important;
       color: inherit !important;
     }
     
@@ -61,7 +62,6 @@
       border: 1px solid #ccc !important;
       background: #fff !important;
       font-family: system-ui, sans-serif !important;
-      font-size: inherit !important;
       color: inherit !important;
     }
     
