@@ -940,6 +940,7 @@ async function init(){
     setTimeout(() => {
       overlay.style.display = 'none';
       content.style.display = 'block';
+      content.removeAttribute('aria-hidden'); // Fix accessibility warning
       setTimeout(() => { content.classList.add('loaded'); setTimeout(()=>updateChart(), 200); }, 50);
     }, 400);
   } catch (err) {
