@@ -1173,6 +1173,14 @@ async function init(){
         pollutantSelect.value = "PM2.5";
       }
 
+      // Add default group selector for normal URLs (like V1 does)
+      const firstGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all") || (window.allGroupsList?.[0] || "");
+      if (firstGroup) {
+        addGroupSelector(firstGroup, false);
+      } else {
+        addGroupSelector("", true); // Empty placeholder if no groups available
+      }
+
       // Show UI immediately for normal URLs - but wait for all DOM updates to complete
       setTimeout(() => {
         const overlay = document.getElementById("loadingOverlay");
