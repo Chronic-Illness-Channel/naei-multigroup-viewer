@@ -49,8 +49,9 @@
     details summary { cursor: pointer; user-select: none; }
     details summary::-webkit-details-marker { cursor: pointer; }
     /* Prevent text cursor on non-text elements */
-    h1, h2, h3, h4, h5, h6, button, label, .chart-container, #chart_div, 
-    .add-btn, .remove-btn, .dragHandle { cursor: default; user-select: none; }
+    h1, h2, h3, h4, h5, h6, label, .chart-container, #chart_div { cursor: default; user-select: none; }
+    /* Ensure interactive elements have pointer cursor */
+    button, .add-btn, .remove-btn, .dragHandle { cursor: pointer; user-select: none; }
     /* Use pointer cursor for interactive form elements */
     input, textarea, select { cursor: pointer; }
 	/* --- Legend dot alignment fix --- */
