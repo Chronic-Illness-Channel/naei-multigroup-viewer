@@ -1056,7 +1056,7 @@ async function loadGroupInfo() {
       const groupTitle = row.Group_Title;
       const sourceName = row.SourceName;
       const activityName = row.ActivityName;
-      const nfrCode = row.NFRCode;
+      const nfrCodeField = row.NFRCode;
       
       if (!groupTitle) return;
       
@@ -1071,7 +1071,14 @@ async function loadGroupInfo() {
       
       if (sourceName) groupMap[groupTitle].sources.add(sourceName);
       if (activityName) groupMap[groupTitle].activities.add(activityName);
-      if (nfrCode) groupMap[groupTitle].nfrCodes.add(nfrCode);
+      
+      // Split semicolon-separated NFR codes
+      if (nfrCodeField) {
+        const nfrCodes = nfrCodeField.split(';').map(code => code.trim()).filter(Boolean);
+        nfrCodes.forEach(code => {
+          if (code) groupMap[groupTitle].nfrCodes.add(code);
+        });
+      }
     });
 
     // Convert to array and sort
