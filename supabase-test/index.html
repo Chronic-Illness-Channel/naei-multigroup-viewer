@@ -12,8 +12,7 @@
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; overflow-x: hidden; min-height: 100vh; }
-    body.loading { overflow: hidden; height: 100vh; position: fixed; width: 100%; }
+    body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; }
     label { font-weight:600; margin-right:6px; }
 	#cicLogo {
 	  position: absolute;
@@ -148,7 +147,7 @@
   </style>
 </head>
 
-<body class="loading">
+<body>
   <div id="loadingOverlay">
     <div class="spinner" aria-hidden="true"></div>
     <div class="loading-text">Loading data, please wait…</div>
@@ -1190,7 +1189,6 @@ async function init(){
       setTimeout(() => {
         overlay.style.display = "none";
         content.style.display = "block";
-        document.body.classList.remove("loading"); // Allow body scroll/resize
         setTimeout(() => {
           content.classList.add("loaded");
           setTimeout(() => updateChart(), 200);
@@ -1329,7 +1327,6 @@ async function init(){
     setTimeout(() => {
       overlay.style.display = "none";
       content.style.display = "block";
-      document.body.classList.remove("loading"); // Allow body scroll/resize
       setTimeout(() => {
         content.classList.add("loaded");
         setTimeout(() => updateChart(), 200);
