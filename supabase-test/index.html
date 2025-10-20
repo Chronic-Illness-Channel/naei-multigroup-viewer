@@ -23,8 +23,7 @@
 	  z-index: 100;
 	}
 	
-    h2 { margin-bottom:8px; }    
-      
+    h2 { margin-bottom:8px; width: 100%; display: block; }      
       #cicLogo {
         width: 50px;
         width: 50px;
@@ -1258,19 +1257,23 @@ async function init(){
 
 
     // === SHOW UI - All setup complete ===
-    const overlay = document.getElementById("loadingOverlay");
-    const content = document.getElementById("mainContent");
-    overlay.style.opacity = "0";
-    setTimeout(() => {
-      overlay.style.display = "none";
-      content.style.display = "block";
-      content.removeAttribute("aria-hidden");
-      setTimeout(() => {
-        content.classList.add("loaded");
-        setTimeout(() => updateChart(), 200);
-      }, 50);
-    }, 400);
-  } catch (err) {    console.error("❌ Initialization failed:", err);
+    // Wait for all DOM updates to complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const overlay = document.getElementById("loadingOverlay");
+        const content = document.getElementById("mainContent");
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+          overlay.style.display = "none";
+          content.style.display = "block";
+          content.removeAttribute("aria-hidden");
+          setTimeout(() => {
+            content.classList.add("loaded");
+            setTimeout(() => updateChart(), 200);
+          }, 50);
+        }, 400);
+      });
+    });  } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
   }
