@@ -1197,23 +1197,27 @@ async function init(){
       document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
       document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-      // Show UI using V1's exact pattern with aggressive content hiding
-      const overlay = document.getElementById("loadingOverlay");
-      const content = document.getElementById("mainContent");
-      overlay.style.opacity = "0";
-      setTimeout(() => {
-        overlay.style.display = "none";
-        content.style.display = "block";
-        content.style.visibility = "visible";
-        content.style.position = "static";
-        content.style.top = "auto";
-        content.style.left = "auto";
-        document.body.classList.remove("loading"); // Allow body scroll/resize
-        setTimeout(() => {
-          content.classList.add("loaded");
-          setTimeout(() => updateChart(), 200);
-        }, 50);
-      }, 400);
+      // Ensure all CSS and layout processing is complete before showing UI
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const overlay = document.getElementById("loadingOverlay");
+          const content = document.getElementById("mainContent");
+          overlay.style.opacity = "0";
+          setTimeout(() => {
+            overlay.style.display = "none";
+            content.style.display = "block";
+            content.style.visibility = "visible";
+            content.style.position = "static";
+            content.style.top = "auto";
+            content.style.left = "auto";
+            document.body.classList.remove("loading"); // Allow body scroll/resize
+            setTimeout(() => {
+              content.classList.add("loaded");
+              setTimeout(() => updateChart(), 200);
+            }, 50);
+          }, 400);
+        });
+      });
       return; // Skip URL processing for normal URLs
     }
 
@@ -1340,23 +1344,27 @@ async function init(){
     document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
     document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-    // Show UI using V1's exact pattern with aggressive content hiding
-    const overlay = document.getElementById("loadingOverlay");
-    const content = document.getElementById("mainContent");
-    overlay.style.opacity = "0";
-    setTimeout(() => {
-      overlay.style.display = "none";
-      content.style.display = "block";
-      content.style.visibility = "visible";
-      content.style.position = "static";
-      content.style.top = "auto";
-      content.style.left = "auto";
-      document.body.classList.remove("loading"); // Allow body scroll/resize
-      setTimeout(() => {
-        content.classList.add("loaded");
-        setTimeout(() => updateChart(), 200);
-      }, 50);
-    }, 400);
+    // Ensure all CSS and layout processing is complete before showing UI
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const overlay = document.getElementById("loadingOverlay");
+        const content = document.getElementById("mainContent");
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+          overlay.style.display = "none";
+          content.style.display = "block";
+          content.style.visibility = "visible";
+          content.style.position = "static";
+          content.style.top = "auto";
+          content.style.left = "auto";
+          document.body.classList.remove("loading"); // Allow body scroll/resize
+          setTimeout(() => {
+            content.classList.add("loaded");
+            setTimeout(() => updateChart(), 200);
+          }, 50);
+        }, 400);
+      });
+    });
   } catch (err) {    console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
       '<div style="color:#900;font-weight:700">Failed to load Supabase data — check connection or table names.</div>';
