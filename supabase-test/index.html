@@ -35,7 +35,20 @@
     }
 	
     select, button { margin:6px; padding:6px 10px; border-radius:6px; border:1px solid #ccc; }
-    #groupContainer { margin-top:10px; }
+    
+    /* Ensure buttons match v1 styling exactly */
+    #downloadBtn, #toggleSmoothBtn, #downloadCSVBtn, #downloadXLSXBtn, #shareBtn {
+      background: #EFEFEF;
+      cursor: pointer;
+      margin: 6px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    
+    #downloadBtn:hover, #toggleSmoothBtn:hover, #downloadCSVBtn:hover, #downloadXLSXBtn:hover, #shareBtn:hover {
+      background: #E0E0E0;
+    }    #groupContainer { margin-top:10px; }
     .groupRow { display:flex; align-items:center; gap:8px; margin:4px 0; }
     .groupRow.dragging { opacity:0.5; }
     .dragHandle { cursor:grab; user-select:none; padding:4px 6px; background:#f0f0f0; border-radius:6px; }
