@@ -25,11 +25,11 @@
 	
     h2 { margin-bottom:8px; width: 100%; display: block; }
 
-    /* Main title styling - keep desktop behaviour identical to V1 */
+    /* Main title styling - keep desktop behaviour similar to V1 */
     h2:first-of-type {
       margin-top: 0;
-      margin-bottom: 20px;
-      font-size: 28px;
+      margin-bottom: 12px;
+      font-size: 26px;
       font-weight: 700;
       line-height: 1.3;
       padding-right: 100px;
@@ -49,11 +49,11 @@
       }
 
       h2:first-of-type {
-        font-size: 22px;
-        line-height: 1.4;
+        font-size: 20px;
+        line-height: 1.35;
         padding-right: 0;
         margin-top: 5px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         text-align: center;
         white-space: normal;
         overflow: visible;
@@ -65,8 +65,8 @@
 
     @media (max-width: 480px) {
       h2:first-of-type {
-        font-size: 20px;
-        line-height: 1.5;
+        font-size: 19px;
+        line-height: 1.4;
         padding-right: 0;
         margin-top: 2px;
         text-align: center;
@@ -135,6 +135,7 @@
     .loading-text { margin-top:12px; color:#333; font-weight:600; }
   #mainContent { display:none; opacity:0; transition:opacity .4s ease; }
     #mainContent.loaded { opacity:1; }
+  #mainContent > details:first-of-type { margin-top: 8px; }
     /* Fix cursor for clickable summary elements */
     details summary { cursor: pointer; user-select: none; }
     details summary::-webkit-details-marker { cursor: pointer; }
