@@ -1100,6 +1100,15 @@ function parseUrlParameters() {
     result.group_ids = groupIds.split(',').map(id => id.trim()).filter(id => id);
   }
   
+  // Get year range
+  if (params.has('start_year')) {
+    result.start_year = params.get('start_year');
+  }
+  
+  if (params.has('end_year')) {
+    result.end_year = params.get('end_year');
+  }
+  
   return result;
 }
 
@@ -1143,7 +1152,10 @@ async function init(){
           trackAnalytics('shared_url_load', {
             pollutant_id: urlParams.pollutant_id,
             pollutant_name: pollutantName,
-            group_ids: urlParams.group_ids || 'none'
+            group_ids: urlParams.group_ids || 'none',
+            start_year: urlParams.start_year || '',
+            end_year: urlParams.end_year || '',
+            has_year_range: !!(urlParams.start_year && urlParams.end_year)
           });
         }
       }
@@ -1208,6 +1220,26 @@ async function init(){
         // If selector exists but has no selection, try to set it
         const existingSel = document.querySelector('#groupContainer select');
         if (existingSel && !existingSel.value && firstGroup) existingSel.value = firstGroup;
+      }
+    }
+    
+    // --- Set year range from URL parameters ---
+    const startYearSelect = document.getElementById('startYear');
+    const endYearSelect = document.getElementById('endYear');
+    
+    if (urlParams.start_year && startYearSelect) {
+      const startOption = startYearSelect.querySelector(`option[value="${urlParams.start_year}"]`);
+      if (startOption) {
+        startYearSelect.value = urlParams.start_year;
+        console.log(`🔗 Set start year from URL: ${urlParams.start_year}`);
+      }
+    }
+    
+    if (urlParams.end_year && endYearSelect) {
+      const endOption = endYearSelect.querySelector(`option[value="${urlParams.end_year}"]`);
+      if (endOption) {
+        endYearSelect.value = urlParams.end_year;
+        console.log(`🔗 Set end year from URL: ${urlParams.end_year}`);
       }
     }
 
@@ -1409,9 +1441,23 @@ function generateShareUrl() {
     return null;
   }
   
-  // Build URL
+  // Get year selections
+  const startYearSelect = document.getElementById('startYear');
+  const endYearSelect = document.getElementById('endYear');
+  const startYear = startYearSelect ? startYearSelect.value : null;
+  const endYear = endYearSelect ? endYearSelect.value : null;
+  
+  // Build URL with all parameters
   const baseUrl = window.location.origin + window.location.pathname;
-  const shareUrl = `${baseUrl}?pollutant_id=${pollutantData.id}&group_ids=${groupIds.join(',')}`;
+  let shareUrl = `${baseUrl}?pollutant_id=${pollutantData.id}&group_ids=${groupIds.join(',')}`;
+  
+  // Add year parameters if they are set
+  if (startYear) {
+    shareUrl += `&start_year=${startYear}`;
+  }
+  if (endYear) {
+    shareUrl += `&end_year=${endYear}`;
+  }
   
   return shareUrl;
 }
@@ -1428,7 +1474,12 @@ function setupShareButton() {
     // Track share usage
     trackAnalytics('share_button_click', {
       pollutant: document.getElementById('pollutantSelect').value,
-      group_count: getSelectedGroups().length
+      group_count: getSelectedGroups().length,
+      start_year: document.getElementById('startYear')?.value || '',
+      end_year: document.getElementById('endYear')?.value || '',
+      year_span: (document.getElementById('endYear')?.value && document.getElementById('startYear')?.value) 
+        ? (parseInt(document.getElementById('endYear').value) - parseInt(document.getElementById('startYear').value) + 1) 
+        : null
     });
     
     // Show share options
@@ -1440,6 +1491,8 @@ function setupShareButton() {
 function showShareDialog(shareUrl) {
   const pollutantName = document.getElementById('pollutantSelect').value;
   const selectedGroups = getSelectedGroups();
+  const startYear = document.getElementById('startYear')?.value || '';
+  const endYear = document.getElementById('endYear')?.value || '';
   
   const dialog = document.createElement('div');
   dialog.style.cssText = `
@@ -1465,8 +1518,9 @@ function showShareDialog(shareUrl) {
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
   `;
   
-  const title = `${pollutantName} - ${selectedGroups.join(', ')}`;
-  const description = `View ${pollutantName} emissions data for ${selectedGroups.length === 1 ? selectedGroups[0] : selectedGroups.length + ' groups'} using the NAEI Multi-Group Pollutant Viewer.`;
+  const yearRange = (startYear && endYear) ? ` (${startYear}-${endYear})` : '';
+  const title = `${pollutantName} - ${selectedGroups.join(', ')}${yearRange}`;
+  const description = `View ${pollutantName} emissions data for ${selectedGroups.length === 1 ? selectedGroups[0] : selectedGroups.length + ' groups'}${yearRange ? ` from ${startYear} to ${endYear}` : ''} using the NAEI Multi-Group Pollutant Viewer.`;
   
   content.innerHTML = `
     <h3 style="margin: 0 0 16px 0; color: #333;">🔗 Share Chart</h3>
@@ -1508,7 +1562,10 @@ function showShareDialog(shareUrl) {
       
       trackAnalytics('share_url_copied', {
         pollutant: pollutantName,
-        group_count: selectedGroups.length
+        group_count: selectedGroups.length,
+        start_year: startYear,
+        end_year: endYear,
+        has_year_range: !!(startYear && endYear)
       });
       
       setTimeout(() => {
@@ -1531,7 +1588,10 @@ function showShareDialog(shareUrl) {
     
     trackAnalytics('share_email_opened', {
       pollutant: pollutantName,
-      group_count: selectedGroups.length
+      group_count: selectedGroups.length,
+      start_year: startYear,
+      end_year: endYear,
+      has_year_range: !!(startYear && endYear)
     });
     
     window.location.href = mailto;
