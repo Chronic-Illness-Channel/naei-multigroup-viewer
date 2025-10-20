@@ -984,7 +984,6 @@ async function revealMainContent() {
   if (!overlay || !content) return;
 
   content.style.display = 'block';
-  content.style.visibility = 'hidden';
   content.removeAttribute('aria-hidden');
 
   await renderInitialView();
@@ -994,7 +993,6 @@ async function revealMainContent() {
   return new Promise(resolve => {
     setTimeout(() => {
       overlay.style.display = 'none';
-      content.style.visibility = 'visible';
       requestAnimationFrame(() => content.classList.add('loaded'));
       resolve();
     }, 400);
