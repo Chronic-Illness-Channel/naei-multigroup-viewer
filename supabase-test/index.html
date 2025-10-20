@@ -1259,7 +1259,8 @@ async function init(){
         addGroupSelector("", true); // Empty placeholder if no groups available
       }
 
-      // Setup all event handlers
+      const revealPromise = revealMainContent();
+
       setupDownloadButton();
       setupSmoothingToggle();
       setupShareButton();
@@ -1267,7 +1268,7 @@ async function init(){
       document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
       document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-      await revealMainContent();
+      await revealPromise;
       return; // Skip URL processing for normal URLs
     }
 
@@ -1387,6 +1388,8 @@ async function init(){
 
 
     // === SHOW UI for shared URLs - after URL processing ===
+    const revealPromise = revealMainContent();
+
     setupDownloadButton();
     setupSmoothingToggle();
     setupShareButton();
@@ -1394,7 +1397,7 @@ async function init(){
     document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
     document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
 
-    await revealMainContent();
+    await revealPromise;
   } catch (err) {
     console.error("❌ Initialization failed:", err);
     document.getElementById('loadingOverlay').innerHTML =
