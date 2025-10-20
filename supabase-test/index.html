@@ -363,6 +363,9 @@ async function loadData() {
     const title = g.Group_Title || g.group_title || g['Group_Title'] || g.group_title;
     if (title) groupIdToTitle[id] = title;
   });
+  
+  console.log('Sample groupIdToTitle mapping:', Object.fromEntries(Object.entries(groupIdToTitle).slice(0, 5)));
+  console.log('Sample pollutantIdToName mapping:', Object.fromEntries(Object.entries(pollutantIdToName).slice(0, 5)));
 
   // Build lists used for dropdowns
   allPollutants = [...new Set(Object.values(pollutantIdToName).filter(Boolean))].sort();
@@ -395,15 +398,33 @@ async function loadData() {
 
   // Build groupedData using FK ids and the lookup maps
   groupedData = {};
-  rows.forEach(r => {
+  let matchedRows = 0;
+  let skippedRows = 0;
+  
+  rows.forEach((r, idx) => {
     const polId = r.Pollutant_id ?? r.pollutant_id ?? r.PollutantId ?? r.pollutantid;
     const grpId = r.Group_id ?? r.group_id ?? r.GroupId ?? r.groupid;
     const polName = pollutantIdToName[polId];
     const grpName = groupIdToTitle[grpId];
-    if (!polName || !grpName) return;
+    
+    if (idx < 3) {
+      console.log(`Sample row ${idx}:`, { polId, grpId, polName, grpName });
+    }
+    
+    if (!polName || !grpName) {
+      skippedRows++;
+      if (skippedRows < 5) {
+        console.warn(`Skipped row ${idx}: polId=${polId} -> ${polName}, grpId=${grpId} -> ${grpName}`);
+      }
+      return;
+    }
+    
+    matchedRows++;
     if (!groupedData[polName]) groupedData[polName] = {};
     groupedData[polName][grpName] = r;
   });
+  
+  console.log(`Matched ${matchedRows} rows, skipped ${skippedRows} rows out of ${rows.length} total`);
 
   // If the groups table didn't provide titles (or permissions prevented access), fall back to groups
   // discovered in the timeseries rows themselves
@@ -419,14 +440,6 @@ async function loadData() {
   }
 
   console.log(`Loaded ${rows.length} timeseries rows; ${allPollutants.length} pollutants; ${allGroups.length} groups`);
-  
-  // Debug: Check which groups have data vs which don't
-  console.log('Groups with data:', groupsFromData.sort());
-  console.log('All groups from NAEI_global_t_Group:', allGroups.sort());
-  const groupsWithoutData = allGroups.filter(g => !groupsFromData.includes(g));
-  if (groupsWithoutData.length > 0) {
-    console.warn('Groups without data:', groupsWithoutData);
-  }
 }
 
 
