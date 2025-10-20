@@ -1158,22 +1158,15 @@ async function init(){
     const urlParams = parseUrlParameters();
     const isSharedUrl = urlParams.pollutant_id || urlParams.group_ids || urlParams.start_year || urlParams.end_year;
 
-    // For normal URLs, show UI immediately after basic setup
+    // For normal URLs, do all DOM setup BEFORE showing UI
     if (!isSharedUrl) {
-      setupDownloadButton();
-      setupSmoothingToggle();
-      setupShareButton();
-      setupInteractionTracking();
-      document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
-      document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
-
       // Set default pollutant
       const pollutantSelect = document.getElementById("pollutantSelect");
       if (pollutantSelect.querySelector("option[value=\"PM2.5\"]")) {
         pollutantSelect.value = "PM2.5";
       }
 
-      // Add default group selector for normal URLs (like V1 does)
+      // Add default group selector EARLY (before any UI transitions)
       const firstGroup = (window.allGroupsList || []).find(g => g.toLowerCase() === "all") || (window.allGroupsList?.[0] || "");
       if (firstGroup) {
         addGroupSelector(firstGroup, false);
@@ -1181,7 +1174,15 @@ async function init(){
         addGroupSelector("", true); // Empty placeholder if no groups available
       }
 
-      // Show UI immediately for normal URLs - but wait for all DOM updates to complete
+      // Setup all event handlers
+      setupDownloadButton();
+      setupSmoothingToggle();
+      setupShareButton();
+      setupInteractionTracking();
+      document.getElementById("downloadCSVBtn").addEventListener("click", () => exportData("csv"));
+      document.getElementById("downloadXLSXBtn").addEventListener("click", () => exportData("xlsx"));
+
+      // Show UI immediately for normal URLs - ALL DOM changes complete
       setTimeout(() => {
         const overlay = document.getElementById("loadingOverlay");
         const content = document.getElementById("mainContent");
