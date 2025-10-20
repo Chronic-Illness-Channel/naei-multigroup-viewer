@@ -48,8 +48,8 @@
     /* Fix cursor for clickable summary elements */
     details summary { cursor: pointer; user-select: none; }
     details summary::-webkit-details-marker { cursor: pointer; }
-    /* Prevent text cursor on non-text elements */
-    h1, h2, h3, h4, h5, h6, label, .chart-container, #chart_div { cursor: default; user-select: none; }
+    /* Prevent text cursor only on non-text UI elements */
+    .chart-container, #chart_div { cursor: default; user-select: none; }
     /* Ensure interactive elements have pointer cursor */
     button, .add-btn, .remove-btn, .dragHandle { cursor: pointer; user-select: none; }
     /* Use pointer cursor for interactive form elements */
