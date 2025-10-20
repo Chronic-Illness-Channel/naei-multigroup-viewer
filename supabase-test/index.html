@@ -40,9 +40,10 @@
       h2:first-of-type {
         font-size: 22px;
         line-height: 1.4;
-        padding-right: 70px; /* Adjusted for smaller logo */
-        margin-top: 5px; /* Minimal top margin */
+        padding-right: 0; /* Remove padding since we have controlled line break */
+        margin-top: 5px;
         margin-bottom: 15px;
+        text-align: center; /* Center the title on mobile */
       }
       
       #cicLogo {
@@ -57,8 +58,9 @@
       h2:first-of-type {
         font-size: 20px;
         line-height: 1.5;
-        padding-right: 60px; /* Adjusted for smallest logo */
+        padding-right: 0; /* Remove padding since we have controlled line break */
         margin-top: 2px;
+        text-align: center; /* Center the title on small mobile too */
       }
       
       #cicLogo {
@@ -165,7 +167,7 @@
 
 
   <div id="mainContent" aria-hidden="true">
-    <h2>NAEI Multi-Group Pollutant Viewer</h2>
+    <h2>NAEI Multi-Group<br>Pollutant Viewer</h2>
 <details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
   <summary class="cursor-pointer text-lg font-semibold text-blue-700 hover:text-blue-900">
     🧭 How to Use the NAEI Multi-Group Pollutant Viewer
