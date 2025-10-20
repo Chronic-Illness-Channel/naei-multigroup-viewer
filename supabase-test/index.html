@@ -19,7 +19,7 @@
       align-items: flex-start;
       justify-content: flex-start;
       gap: 16px;
-      margin-bottom: 12px;
+      margin-bottom: 6px;
       flex-wrap: nowrap;
     }
   #cicLogo {
@@ -39,10 +39,15 @@
       font-weight: 700;
       line-height: 1.3;
       white-space: normal;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
       text-align: left;
       flex: 1 1 240px;
       min-width: 0;
+    }
+
+    .main-title .title-part {
+      display: inline;
+      white-space: nowrap;
     }
     
     /* Mobile styles */
@@ -63,6 +68,16 @@
 
       body {
         margin: 15px;
+      }
+    }
+
+    @media (max-width: 880px) {
+      .main-title .title-part-2 {
+        display: block;
+      }
+
+      .title-row {
+        margin-bottom: 20px;
       }
     }
 	
@@ -186,7 +201,7 @@
 
   <div id="mainContent" aria-hidden="true">
     <div class="title-row">
-      <h2 class="main-title">NAEI Multi-Group<wbr> Pollutant Viewer</h2>
+  <h2 class="main-title"><span class="title-part title-part-1">NAEI Multi-Group</span> <span class="title-part title-part-2">Pollutant Viewer</span></h2>
       <img id="cicLogo" src="CIC - Square - Border - Words - Alpha 360x360.png" alt="CIC Logo">
     </div>
 <details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
