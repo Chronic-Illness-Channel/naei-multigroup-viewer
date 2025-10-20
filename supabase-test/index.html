@@ -1601,25 +1601,39 @@ function showShareDialog(shareUrl) {
     
     if (includeImage) {
       try {
-        // Generate chart image and include it
+        // Generate comprehensive chart image (same as PNG download)
         const chartImageData = await generateChartImage();
-        emailBody += `Chart image is attached.\n\n`;
         
-        // Note: Most email clients don't support data URLs in mailto links
-        // So we'll provide instructions for the user
+        // Download the image automatically for easy attachment
+        const link = document.createElement('a');
+        const safeName = pollutantName.replace(/[^a-z0-9_\-]/gi, '_');
+        const filename = `${safeName}_${startYear || 'all'}_${endYear || 'years'}.png`;
+        link.download = filename;
+        link.href = chartImageData;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        
         emailBody += `📊 Chart Image:\n`;
-        emailBody += `The chart image has been copied to your clipboard. You can paste it into your email.\n\n`;
+        emailBody += `A high-quality chart image (${filename}) has been downloaded to your computer.\n`;
+        emailBody += `Please attach this file to your email - it includes the complete chart with title, legend, and CIC logo.\n\n`;
         
-        // Copy image to clipboard if supported
+        // Also try to copy to clipboard as fallback
         if (navigator.clipboard && navigator.clipboard.write) {
-          const blob = dataURLtoBlob(chartImageData);
-          const clipboardItem = new ClipboardItem({ 'image/png': blob });
-          await navigator.clipboard.write([clipboardItem]);
+          try {
+            const blob = dataURLtoBlob(chartImageData);
+            const clipboardItem = new ClipboardItem({ 'image/png': blob });
+            await navigator.clipboard.write([clipboardItem]);
+            emailBody += `The image has also been copied to your clipboard as a backup.\n\n`;
+          } catch (clipboardError) {
+            console.warn('Clipboard copy failed:', clipboardError);
+          }
         }
+        
       } catch (error) {
-        console.warn('Could not generate or copy chart image:', error);
+        console.warn('Could not generate chart image:', error);
         emailBody += `📊 Chart image could not be generated automatically.\n`;
-        emailBody += `You can download the chart image using the "⬇️ Download Chart as PNG" button and attach it manually.\n\n`;
+        emailBody += `Please use the "⬇️ Download Chart as PNG" button to get the chart image and attach it manually.\n\n`;
       }
     }
     
@@ -1658,20 +1672,152 @@ function showShareDialog(shareUrl) {
   }, 100);
 }
 
-// Generate chart image for email sharing
+// Generate comprehensive chart image for email sharing (same as PNG download)
 async function generateChartImage() {
   return new Promise((resolve, reject) => {
     try {
-      // Get the current chart
-      const chartDiv = document.getElementById('chart_div');
-      if (!chartDiv || !chart) {
-        reject(new Error('Chart not available'));
+      const pollutant = document.getElementById('pollutantSelect').value;
+      if (!chart || !pollutant) {
+        reject(new Error('Chart or pollutant not available'));
         return;
       }
-      
-      // Use Google Charts built-in image generation
+
+      const unit = pollutantUnits[pollutant] || "";
       const imageURI = chart.getImageURI();
-      resolve(imageURI);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        try {
+          // --- Measure legend for layout ---
+          const legendClone = document.getElementById('customLegend').cloneNode(true);
+          legendClone.style.position = 'absolute';
+          legendClone.style.visibility = 'hidden';
+          legendClone.style.width = Math.min(800, img.width) + 'px';
+          document.body.appendChild(legendClone);
+          const legendHeight = legendClone.offsetHeight + 10;
+          document.body.removeChild(legendClone);
+
+          const titleHeight = 30;
+          const footerHeight = 40;
+          const padding = 20;
+
+          // --- Determine output size ---
+          const unscaledWidth = img.width + padding * 2;
+          const unscaledHeight = img.height + titleHeight + legendHeight + footerHeight + padding * 3;
+
+          // --- Create canvas ---
+          const canvas = document.createElement('canvas');
+          canvas.width = unscaledWidth;
+          canvas.height = unscaledHeight;
+          const ctx = canvas.getContext('2d');
+
+          // --- Background ---
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, unscaledWidth, unscaledHeight);
+
+          // --- Title ---
+          ctx.font = 'bold 18px system-ui, sans-serif';
+          ctx.fillStyle = '#000000';
+          ctx.textAlign = 'center';
+          ctx.fillText(
+            `${pollutant}${unit ? " (" + unit + ")" : ""}`,
+            unscaledWidth / 2,
+            padding + 15
+          );
+
+          // --- Legend ---
+          const legendDiv = document.getElementById('customLegend');
+          const items = [...legendDiv.querySelectorAll('span')];
+          let legendY = padding + 35;
+          const legendRowHeight = 22;
+          const maxW = unscaledWidth - padding * 2;
+          const rowItems = [];
+          let row = [], rowW = 0;
+
+          items.forEach((it) => {
+            const dot = it.querySelector('span');
+            if (!dot) return;
+            const text = it.textContent.trim();
+            ctx.font = '600 14px system-ui, sans-serif';
+            const textW = ctx.measureText(text).width;
+            const w = textW + 40;
+            if (rowW + w > maxW && row.length) {
+              rowItems.push({ row, rowW });
+              row = [];
+              rowW = 0;
+            }
+            row.push({ dotColor: dot.style.backgroundColor, text });
+            rowW += w;
+          });
+
+          if (row.length) rowItems.push({ row, rowW });
+
+          rowItems.forEach(({ row, rowW }) => {
+            let x = (unscaledWidth - rowW) / 2;
+            row.forEach(({ dotColor, text }) => {
+              const faded = text.includes('(No data available)');
+              ctx.globalAlpha = faded ? 0.4 : 1.0;
+              ctx.beginPath();
+              ctx.arc(x + 6, legendY - 5, 6, 0, 2 * Math.PI);
+              ctx.fillStyle = dotColor;
+              ctx.fill();
+              ctx.font = '600 14px system-ui, sans-serif';
+              ctx.fillStyle = '#000000';
+              ctx.textAlign = 'left';
+              ctx.fillText(text, x + 18, legendY);
+              ctx.globalAlpha = 1.0;
+              x += ctx.measureText(text).width + 40;
+            });
+            legendY += legendRowHeight;
+          });
+
+          // --- Chart image ---
+          ctx.drawImage(img, padding, legendY + 10);
+
+          // --- Logo and footer ---
+          const logo = new Image();
+          logo.crossOrigin = 'anonymous';
+          logo.src = 'CIC - Square - Border - Words - Alpha 360x360.png';
+
+          const finishGeneration = () => {
+            const footerText = "© Crown 2025 copyright Defra & DESNZ via naei.energysecurity.gov.uk licensed under the Open Government Licence (OGL).";
+            
+            ctx.font = '12px system-ui, sans-serif';
+            ctx.fillStyle = '#555';
+            ctx.textAlign = 'center';
+            ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
+            
+            const dataURL = canvas.toDataURL('image/png');
+            resolve(dataURL);
+          };
+
+          logo.onload = () => {
+            try {
+              const logoSize = 80;
+              ctx.drawImage(logo, unscaledWidth - logoSize - 20, 10, logoSize, logoSize);
+              finishGeneration();
+            } catch (e) {
+              console.warn('Logo failed to draw, continuing without logo:', e);
+              finishGeneration();
+            }
+          };
+
+          logo.onerror = () => {
+            console.warn('Logo failed to load, continuing without logo');
+            finishGeneration();
+          };
+
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      img.onerror = (e) => {
+        reject(new Error('Failed to load chart image for generation'));
+      };
+
+      img.src = imageURI;
     } catch (error) {
       reject(error);
     }
