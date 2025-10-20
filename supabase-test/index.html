@@ -23,23 +23,25 @@
 	  z-index: 100;
 	}
 	
-    /* Main title styling with mobile responsiveness */
+    /* Main title styling with natural wrapping */
     h2:first-of-type {
       margin-top: 0;
       margin-bottom: 20px;
       font-size: 28px;
       font-weight: 700;
       line-height: 1.3;
-      padding-right: 100px; /* Space for logo on desktop */
+      padding-right: 100px; /* Space for logo on all screens */
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
-    /* Mobile styles */
+    /* Mobile and tablet styles */
     @media (max-width: 768px) {
       h2:first-of-type {
         font-size: 22px;
         line-height: 1.4;
-        padding-right: 0; /* Remove right padding on mobile */
-        margin-top: 60px; /* Push title down below logo */
+        padding-right: 70px; /* Adjusted for smaller logo */
+        margin-top: 5px; /* Minimal top margin */
         margin-bottom: 15px;
       }
       
@@ -54,10 +56,13 @@
     @media (max-width: 480px) {
       h2:first-of-type {
         font-size: 20px;
-        margin-top: 50px;
+        line-height: 1.5;
+        padding-right: 60px; /* Adjusted for smallest logo */
+        margin-top: 2px;
       }
       
       #cicLogo {
+        width: 50px;
         width: 50px;
       }
       
