@@ -1179,19 +1179,21 @@ async function init(){
         pollutantSelect.value = "PM2.5";
       }
 
-      // Show UI immediately for normal URLs
-      const overlay = document.getElementById("loadingOverlay");
-      const content = document.getElementById("mainContent");
-      overlay.style.opacity = "0";
-      setTimeout(() => {
-        overlay.style.display = "none";
-        content.style.display = "block";
-        content.removeAttribute("aria-hidden");
+      // Show UI immediately for normal URLs - but wait for DOM updates
+      requestAnimationFrame(() => {
+        const overlay = document.getElementById("loadingOverlay");
+        const content = document.getElementById("mainContent");
+        overlay.style.opacity = "0";
         setTimeout(() => {
-          content.classList.add("loaded");
-          setTimeout(() => updateChart(), 200);
-        }, 50);
-      }, 400);
+          overlay.style.display = "none";
+          content.style.display = "block";
+          content.removeAttribute("aria-hidden");
+          setTimeout(() => {
+            content.classList.add("loaded");
+            setTimeout(() => updateChart(), 200);
+          }, 50);
+        }, 400);
+      });
       return; // Skip URL processing for normal URLs
     }
 
