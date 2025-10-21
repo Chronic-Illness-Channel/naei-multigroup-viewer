@@ -956,10 +956,11 @@ function updateChart(){
   if (yearTicks.length && yearTicks.slice(0,-1).every(y => y === '' || years.includes(y))) {
     options.hAxis.ticks = yearTicks.map(y => String(y));
     // Do not set viewWindow for hAxis, let Google Charts handle it
-    options.hAxis.slantedText = isMobile;
     if (isMobile) {
-      options.hAxis.slantedTextAngle = 45;
+      options.hAxis.slantedText = true;
+      options.hAxis.slantedTextAngle = 90;
     } else {
+      options.hAxis.slantedText = false;
       delete options.hAxis.slantedTextAngle;
     }
   }
