@@ -942,26 +942,26 @@ function updateChart(){
     if (yearTicks[0] !== years[0]) yearTicks.unshift(years[0]);
     if (yearTicks[yearTicks.length - 1] !== years[years.length - 1]) yearTicks.push(years[years.length - 1]);
   }
-  // Remove duplicates and sort
-  yearTicks = Array.from(new Set(yearTicks)).sort();
+  // Remove duplicates, preserve order
+  yearTicks = yearTicks.filter((y, i) => yearTicks.indexOf(y) === i);
+  // On mobile, show only first, middle, last year for clarity
+  const isMobile = window.innerWidth < 600;
+  if (isMobile && years.length >= 3) {
+    yearTicks = [years[0], years[Math.floor(years.length/2)], years[years.length-1]];
+  }
   if (yearTicks.length && yearTicks.every(y => years.includes(y))) {
     options.hAxis.ticks = yearTicks.map(y => String(y));
     // Do not set viewWindow for hAxis, let Google Charts handle it
-    const shouldSlant = window.innerWidth < 600;
-    options.hAxis.slantedText = shouldSlant;
-    if (shouldSlant) {
+    options.hAxis.slantedText = isMobile;
+    if (isMobile) {
       options.hAxis.slantedTextAngle = 45;
-      // On mobile, reduce tick count for clarity
-      if (yearTicks.length > 4) {
-        options.hAxis.ticks = [years[0], years[Math.floor(years.length/2)], years[years.length-1]].map(y => String(y));
-      }
     } else {
       delete options.hAxis.slantedTextAngle;
     }
   }
   // Increase right chart padding to ensure last label is visible
   if (options.chartArea) {
-    options.chartArea.right = Math.max(options.chartArea.right || 20, 40);
+    options.chartArea.right = Math.max(options.chartArea.right || 20, 60);
   }
 
   // Delay slightly to let layout stabilize (prevents negative sizes)
