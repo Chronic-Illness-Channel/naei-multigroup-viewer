@@ -937,9 +937,10 @@ function updateChart(){
   options.height = safeHeight;
 
   let yearTicks = calculateYearTicks(years, safeWidth);
-  // Always include the last year in the ticks
-  if (years.length && yearTicks.length && yearTicks[yearTicks.length - 1] !== years[years.length - 1]) {
-    yearTicks.push(years[years.length - 1]);
+  // Always include the first and last year in the ticks
+  if (years.length && yearTicks.length) {
+    if (yearTicks[0] !== years[0]) yearTicks.unshift(years[0]);
+    if (yearTicks[yearTicks.length - 1] !== years[years.length - 1]) yearTicks.push(years[years.length - 1]);
   }
   // Remove duplicates and sort
   yearTicks = Array.from(new Set(yearTicks)).sort();
