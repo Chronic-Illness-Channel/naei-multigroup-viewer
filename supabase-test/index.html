@@ -936,7 +936,13 @@ function updateChart(){
   options.width = safeWidth;
   options.height = safeHeight;
 
-  const yearTicks = calculateYearTicks(years, safeWidth);
+  let yearTicks = calculateYearTicks(years, safeWidth);
+  // Always include the last year in the ticks
+  if (years.length && yearTicks.length && yearTicks[yearTicks.length - 1] !== years[years.length - 1]) {
+    yearTicks.push(years[years.length - 1]);
+  }
+  // Remove duplicates and sort
+  yearTicks = Array.from(new Set(yearTicks)).sort();
   if (yearTicks.length && yearTicks.every(y => years.includes(y))) {
     options.hAxis.ticks = yearTicks.map(y => String(y));
     // Do not set viewWindow for hAxis, let Google Charts handle it
