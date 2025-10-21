@@ -946,8 +946,8 @@ function updateChart(){
   yearTicks = yearTicks.filter((y, i) => yearTicks.indexOf(y) === i);
   // On mobile, show only first, middle, last year for clarity
   const isMobile = window.innerWidth < 600;
-  if (isMobile && years.length >= 3) {
-    yearTicks = [years[0], years[Math.floor(years.length/2)], years[years.length-1]];
+  if (isMobile && years.length >= 2) {
+    yearTicks = [years[0], years[years.length-1]];
   }
   // Add a trailing empty tick to force space for last year label
   if (yearTicks.length) {
@@ -966,7 +966,10 @@ function updateChart(){
   }
   // Maximize right chart padding to ensure last label is visible
   if (options.chartArea) {
-    options.chartArea.right = Math.max(options.chartArea.right || 20, 100);
+    options.chartArea.right = Math.max(options.chartArea.right || 20, 120);
+    if (isMobile) {
+      options.chartArea.width = '70%';
+    }
   }
 
   // Delay slightly to let layout stabilize (prevents negative sizes)
