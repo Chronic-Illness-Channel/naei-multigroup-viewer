@@ -949,7 +949,11 @@ function updateChart(){
   if (isMobile && years.length >= 3) {
     yearTicks = [years[0], years[Math.floor(years.length/2)], years[years.length-1]];
   }
-  if (yearTicks.length && yearTicks.every(y => years.includes(y))) {
+  // Add a trailing empty tick to force space for last year label
+  if (yearTicks.length) {
+    yearTicks.push('');
+  }
+  if (yearTicks.length && yearTicks.slice(0,-1).every(y => y === '' || years.includes(y))) {
     options.hAxis.ticks = yearTicks.map(y => String(y));
     // Do not set viewWindow for hAxis, let Google Charts handle it
     options.hAxis.slantedText = isMobile;
@@ -959,9 +963,9 @@ function updateChart(){
       delete options.hAxis.slantedTextAngle;
     }
   }
-  // Increase right chart padding to ensure last label is visible
+  // Maximize right chart padding to ensure last label is visible
   if (options.chartArea) {
-    options.chartArea.right = Math.max(options.chartArea.right || 20, 60);
+    options.chartArea.right = Math.max(options.chartArea.right || 20, 100);
   }
 
   // Delay slightly to let layout stabilize (prevents negative sizes)
