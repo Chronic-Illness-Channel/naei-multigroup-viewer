@@ -937,9 +937,9 @@ function updateChart(){
   options.height = safeHeight;
 
   const yearTicks = calculateYearTicks(years, safeWidth);
-  if (yearTicks.length) {
-    options.hAxis.ticks = yearTicks;
-    options.hAxis.viewWindow = { min: yearTicks[0], max: yearTicks[yearTicks.length - 1] };
+  if (yearTicks.length && yearTicks.every(y => years.includes(y))) {
+    options.hAxis.ticks = yearTicks.map(y => String(y));
+    // Do not set viewWindow for hAxis, let Google Charts handle it
     const shouldSlant = window.innerWidth < 600;
     options.hAxis.slantedText = shouldSlant;
     if (shouldSlant) {
