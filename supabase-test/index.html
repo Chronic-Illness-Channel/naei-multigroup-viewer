@@ -15,18 +15,15 @@
     body { font-family: system-ui, sans-serif; margin: 20px; color: #000; background:#fff; }
     label { font-weight:600; margin-right:6px; }
     .title-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: flex-start;
-      gap: 16px;
-  margin-bottom: 4px;
-      flex-wrap: nowrap;
+      position: relative;
+      margin-bottom: 0;
     }
   #cicLogo {
+    position: absolute;
+    top: 0;
+    right: 0;
     width: 110px;
     height: auto;
-    flex: 0 0 auto;
-    margin-top: 4px;
     max-width: none;
   }
 	
@@ -34,15 +31,14 @@
 
     /* Main title styling - keep desktop behaviour similar to V1 */
     .main-title {
-      margin: 0;
+      margin: 0 0 20px 0;
+      padding-right: 140px;
       font-size: 26px;
       font-weight: 700;
       line-height: 1.3;
       white-space: normal;
       overflow-wrap: normal;
       text-align: left;
-      flex: 1 1 240px;
-      min-width: 0;
     }
 
     .main-title .title-part {
@@ -55,17 +51,9 @@
       body {
         margin: 15px;
       }
-      
-      .title-row {
-        gap: 12px;
-      }
     }
 
     @media (max-width: 480px) {
-      .title-row {
-        gap: 10px;
-      }
-
       body {
         margin: 15px;
       }
@@ -74,14 +62,6 @@
     @media (max-width: 880px) {
       .main-title .title-part-2 {
         display: block;
-      }
-
-      .title-row {
-        margin-bottom: 18px;
-      }
-
-      #mainContent > details:first-of-type {
-        margin-top: 16px;
       }
     }
 	
@@ -134,7 +114,6 @@
     .loading-text { margin-top:12px; color:#333; font-weight:600; }
   #mainContent { display:none; opacity:0; transition:opacity .4s ease; }
     #mainContent.loaded { opacity:1; }
-  #mainContent > details:first-of-type { margin-top: 4px; }
     /* Fix cursor for clickable summary elements */
     details summary { cursor: pointer; user-select: none; }
     details summary::-webkit-details-marker { cursor: pointer; }
