@@ -762,6 +762,39 @@ function refreshButtons() {
   }
 }
 
+function calculateYearTicks(years, chartWidth) {
+  if (!years || !years.length) return [];
+
+  const uniqueYears = [...new Set(years.map(y => String(y)))];
+  if (!uniqueYears.length) return [];
+
+  const firstYear = uniqueYears[0];
+  const lastYear = uniqueYears[uniqueYears.length - 1];
+
+  if (uniqueYears.length <= 2) {
+    return uniqueYears;
+  }
+
+  const maxTicks = chartWidth < 480 ? 4 : chartWidth < 720 ? 6 : 10;
+  if (uniqueYears.length <= maxTicks) {
+    return uniqueYears;
+  }
+
+  const middleYears = uniqueYears.slice(1, -1);
+  const step = Math.max(1, Math.ceil(middleYears.length / (maxTicks - 2)));
+  const ticks = [firstYear];
+
+  for (let i = 0; i < middleYears.length; i += step) {
+    ticks.push(middleYears[i]);
+  }
+
+  if (ticks[ticks.length - 1] !== lastYear) {
+    ticks.push(lastYear);
+  }
+
+  return ticks;
+}
+
 /* ---------------- Drag and drop handlers ---------------- */
 function addDragAndDropHandlers(div){
   div.addEventListener('dragstart', e => {
@@ -861,12 +894,18 @@ function updateChart(){
   const labelLength = maxValue ? maxValue.toLocaleString().length : 3;
   const leftMargin = Math.min(100, Math.max(60, labelLength * 10)); // dynamic left padding
 
+  const chartContainer = document.getElementById('chart_div');
+
   const options = {
     title: '',
     width: '100%',
     height: '70%',
     legend: 'none',
-    hAxis: { title: 'Year' },
+    hAxis: {
+      title: 'Year',
+      textStyle: { fontSize: 12 },
+      titleTextStyle: { fontSize: 13, bold: true }
+    },
     vAxis: {
       title: `Emissions${unit ? " (" + unit + ")" : ""}`,
       viewWindow: { min: 0 },
@@ -889,7 +928,6 @@ function updateChart(){
   
 
   // draw chart and show pollutant as visible page title
-  const chartContainer = document.getElementById('chart_div');
   chart = new google.visualization.LineChart(chartContainer);
 
   // Compute safe width/height to avoid negative SVG dimensions
@@ -897,6 +935,19 @@ function updateChart(){
   const safeHeight = Math.max(chartContainer.offsetHeight || 0, 200);
   options.width = safeWidth;
   options.height = safeHeight;
+
+  const yearTicks = calculateYearTicks(years, safeWidth).map(y => ({ v: y, f: y }));
+  if (yearTicks.length) {
+    options.hAxis.ticks = yearTicks;
+    options.hAxis.viewWindow = { min: yearTicks[0].v, max: yearTicks[yearTicks.length - 1].v };
+    const shouldSlant = window.innerWidth < 600;
+    options.hAxis.slantedText = shouldSlant;
+    if (shouldSlant) {
+      options.hAxis.slantedTextAngle = 45;
+    } else {
+      delete options.hAxis.slantedTextAngle;
+    }
+  }
 
   // Delay slightly to let layout stabilize (prevents negative sizes)
   setTimeout(() => {
