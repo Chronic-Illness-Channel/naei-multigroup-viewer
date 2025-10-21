@@ -60,6 +60,10 @@
     }
 
     @media (max-width: 700px) {
+      .main-title {
+        padding-right: 0;
+      }
+
       .main-title .title-part-2 {
         display: block;
       }
@@ -1655,7 +1659,7 @@ function showShareDialog(shareUrl) {
     <div style="margin: 16px 0;">
       <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
         <input type="checkbox" id="includeImageCheckbox" style="margin-right: 8px;">
-        <span style="font-weight: 600;">� Copy chart image to clipboard for pasting into email</span>
+        <span style="font-weight: 600;">🖼️ Copy chart image to clipboard for pasting into email</span>
       </label>
       
       <button id="emailShareBtn" style="padding: 12px 20px; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-right: 8px;">
@@ -1719,12 +1723,12 @@ function showShareDialog(shareUrl) {
         const chartImageData = await generateChartImage();
         
         // Copy to clipboard
-        if (navigator.clipboard && navigator.clipboard.write) {
+        if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
           const blob = dataURLtoBlob(chartImageData);
           const clipboardItem = new ClipboardItem({ 'image/png': blob });
           await navigator.clipboard.write([clipboardItem]);
           
-          emailBody += `� Chart Image:\n`;
+          emailBody += `🖼️ Chart Image:\n`;
           emailBody += `The complete chart image (including title, legend, and CIC logo) has been copied to your clipboard.\n`;
           emailBody += `You can now paste it directly into your email.\n\n`;
         } else {
@@ -1735,7 +1739,7 @@ function showShareDialog(shareUrl) {
         
       } catch (error) {
         console.warn('Could not generate chart image:', error);
-        emailBody += `� Chart Image:\n`;
+        emailBody += `🖼️ Chart Image:\n`;
         emailBody += `Chart image could not be generated automatically.\n`;
         emailBody += `Please use the "⬇️ Download Chart as PNG" button to get the chart image.\n\n`;
       }
