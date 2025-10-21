@@ -951,9 +951,17 @@ function updateChart(){
     options.hAxis.slantedText = shouldSlant;
     if (shouldSlant) {
       options.hAxis.slantedTextAngle = 45;
+      // On mobile, reduce tick count for clarity
+      if (yearTicks.length > 4) {
+        options.hAxis.ticks = [years[0], years[Math.floor(years.length/2)], years[years.length-1]].map(y => String(y));
+      }
     } else {
       delete options.hAxis.slantedTextAngle;
     }
+  }
+  // Increase right chart padding to ensure last label is visible
+  if (options.chartArea) {
+    options.chartArea.right = Math.max(options.chartArea.right || 20, 40);
   }
 
   // Delay slightly to let layout stabilize (prevents negative sizes)
