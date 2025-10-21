@@ -772,12 +772,12 @@ function calculateYearTicks(years, chartWidth) {
   const lastYear = uniqueYears[uniqueYears.length - 1];
 
   if (uniqueYears.length <= 2) {
-    return uniqueYears;
+    return uniqueYears.map(y => y);
   }
 
   const maxTicks = chartWidth < 480 ? 4 : chartWidth < 720 ? 6 : 10;
   if (uniqueYears.length <= maxTicks) {
-    return uniqueYears;
+    return uniqueYears.map(y => y);
   }
 
   const middleYears = uniqueYears.slice(1, -1);
@@ -792,7 +792,7 @@ function calculateYearTicks(years, chartWidth) {
     ticks.push(lastYear);
   }
 
-  return ticks;
+  return ticks.map(y => y);
 }
 
 /* ---------------- Drag and drop handlers ---------------- */
@@ -936,10 +936,10 @@ function updateChart(){
   options.width = safeWidth;
   options.height = safeHeight;
 
-  const yearTicks = calculateYearTicks(years, safeWidth).map(y => ({ v: y, f: y }));
+  const yearTicks = calculateYearTicks(years, safeWidth);
   if (yearTicks.length) {
     options.hAxis.ticks = yearTicks;
-    options.hAxis.viewWindow = { min: yearTicks[0].v, max: yearTicks[yearTicks.length - 1].v };
+    options.hAxis.viewWindow = { min: yearTicks[0], max: yearTicks[yearTicks.length - 1] };
     const shouldSlant = window.innerWidth < 600;
     options.hAxis.slantedText = shouldSlant;
     if (shouldSlant) {
