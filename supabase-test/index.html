@@ -359,7 +359,10 @@ google.charts.load('current', {packages:['corechart']});
 // Supabase project connection
 const SUPABASE_URL = 'https://vhplzwzzkeueyelaqftl.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZocGx6d3p6a2V1ZXllbGFxZnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NjQwODUsImV4cCI6MjA3NjA0MDA4NX0.mBAwFmfSpqffvp1GGDHKvp-y_hukSZmF4GN-Ghnf--o';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = (window.supabase && window.supabase.createClient)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+let supabaseUnavailableLogged = false;
 
 // Analytics tracking
 let sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -420,6 +423,16 @@ function generateUserFingerprint() {
 // Track analytics events
 async function trackAnalytics(eventType, eventData = {}) {
   try {
+    if (!eventType) return;
+
+    if (!supabase) {
+      if (!supabaseUnavailableLogged) {
+        console.warn('Supabase client unavailable; analytics events will be skipped.');
+        supabaseUnavailableLogged = true;
+      }
+      return;
+    }
+
     const analyticsData = {
       session_id: sessionId,
       user_fingerprint: generateUserFingerprint(),
@@ -433,22 +446,17 @@ async function trackAnalytics(eventType, eventData = {}) {
       page_url: window.location.href,
       referrer: document.referrer || null
     };
-    
-    // Only send if we have a valid event type
-    if (!eventType) return;
-    
+
     console.log('📊 Analytics:', eventType, eventData);
-    
-    // Store in Supabase analytics table
+
     const { error } = await supabase
       .from('analytics_events')
       .insert([analyticsData]);
-    
+
     if (error && !error.message?.includes('relation "analytics_events" does not exist')) {
       console.warn('Analytics tracking failed:', error);
     }
   } catch (err) {
-    // Silently fail - don't break the app for analytics
     console.warn('Analytics error:', err);
   }
 }
@@ -1217,7 +1225,9 @@ async function init(){
     });
     
     // --- Load all data once ---
-    await Promise.all([loadUnits(), loadData(), loadGroupInfo()]);
+    await loadUnits();
+    await loadData();
+    await loadGroupInfo();
 
     // --- Populate dropdowns ---
     setupSelectors();
@@ -1968,41 +1978,64 @@ function dataURLtoBlob(dataURL) {
 
 async function loadGroupInfo() {
   try {
-    // Fetch group information and NFR codes from Supabase
-    const [groupsResp, nfrResp] = await Promise.all([
-      supabase.from('NAEI_global_t_Group').select('*'),
-      supabase.from('NAEI_global_t_NFRCode').select('*')
-    ]);
+    let groupRows = [];
+    let nfrRows = [];
 
-    if (groupsResp.error) throw groupsResp.error;
-    if (nfrResp.error) throw nfrResp.error;
+    if (supabase) {
+      const { data: supabaseGroups, error: groupError } = await supabase
+        .from('NAEI_global_t_Group')
+        .select('id,Group_Title,SourceName,ActivityName,NFRCode');
 
-    const groupsData = groupsResp.data || [];
-    const nfrData = nfrResp.data || [];
+      if (groupError) {
+        console.warn('Failed to load group info from Supabase:', groupError);
+      } else {
+        groupRows = supabaseGroups || [];
+      }
 
-    console.log('Loaded groups from Supabase:', groupsData?.length || 0);
-    console.log('Loaded NFR codes from Supabase:', nfrData?.length || 0);
-    console.log('Sample group data:', groupsData?.[0]);
+      try {
+        const { data: supabaseNfr, error: nfrError } = await supabase
+          .from('NAEI_global_t_NFRCode')
+          .select('*');
 
-    // Build NFR code lookup map
+        if (nfrError) {
+          console.warn('Failed to load NFR code descriptions from Supabase:', nfrError);
+        } else {
+          nfrRows = supabaseNfr || [];
+        }
+      } catch (nfrErr) {
+        console.warn('Failed to load NFR code descriptions from Supabase:', nfrErr);
+      }
+    } else {
+      console.warn('Supabase client unavailable; falling back to cached group rows.');
+    }
+
+    if (!groupRows.length && groupsData && groupsData.length) {
+      groupRows = groupsData;
+    }
+
+    if (!groupRows.length) {
+      throw new Error('No group information available from Supabase or cached data.');
+    }
+
     const nfrMap = {};
-    nfrData.forEach(nfr => {
-      if (nfr.NFRCode && nfr.Description) {
-        nfrMap[nfr.NFRCode] = nfr.Description;
+    nfrRows.forEach(nfr => {
+      const code = nfr?.NFRCode || nfr?.nfrcode || nfr?.nfr_code;
+      const description = nfr?.Description || nfr?.description;
+      if (code && description) {
+        nfrMap[code] = description;
       }
     });
 
-    // Process Supabase group data to aggregate by Group_Title
     const groupMap = {};
-    
-    groupsData.forEach(row => {
-      const groupTitle = row.Group_Title;
-      const sourceName = row.SourceName;
-      const activityName = row.ActivityName;
-      const nfrCodeField = row.NFRCode;
-      
+
+    groupRows.forEach(row => {
+      const groupTitle = row?.Group_Title || row?.group_title || row?.Group || row?.group;
+      const sourceName = row?.SourceName || row?.source_name || row?.Source || row?.source;
+      const activityName = row?.ActivityName || row?.activity_name || row?.Activity || row?.activity;
+      const nfrCodeField = row?.NFRCode || row?.nfrcode || row?.nfr_code;
+
       if (!groupTitle) return;
-      
+
       if (!groupMap[groupTitle]) {
         groupMap[groupTitle] = {
           name: groupTitle,
@@ -2011,34 +2044,41 @@ async function loadGroupInfo() {
           nfrCodes: new Set()
         };
       }
-      
-      if (sourceName) groupMap[groupTitle].sources.add(sourceName);
-      if (activityName) groupMap[groupTitle].activities.add(activityName);
-      
-      // Split semicolon-separated NFR codes
+
+      if (sourceName) {
+        groupMap[groupTitle].sources.add(sourceName);
+      }
+
+      if (activityName) {
+        groupMap[groupTitle].activities.add(activityName);
+      }
+
       if (nfrCodeField) {
-        const nfrCodes = nfrCodeField.split(';').map(code => code.trim()).filter(Boolean);
-        nfrCodes.forEach(code => {
-          if (code) groupMap[groupTitle].nfrCodes.add(code);
-        });
+        nfrCodeField
+          .split(/[;,]/)
+          .map(code => code.trim())
+          .filter(Boolean)
+          .forEach(code => groupMap[groupTitle].nfrCodes.add(code));
       }
     });
 
-    // Convert to array and sort
-    const groups = Object.values(groupMap).map(g => ({
-      name: g.name,
-      sources: Array.from(g.sources).sort(),
-      activities: Array.from(g.activities).sort(),
-      nfrCodes: Array.from(g.nfrCodes).sort()
-    }));
+    const groups = Object.values(groupMap)
+      .map(g => ({
+        name: g.name,
+        sources: Array.from(g.sources).sort(),
+        activities: Array.from(g.activities).sort(),
+        nfrCodes: Array.from(g.nfrCodes).sort()
+      }))
+      .sort((a, b) => {
+        if (a.name.toLowerCase() === 'all') return -1;
+        if (b.name.toLowerCase() === 'all') return 1;
+        return a.name.localeCompare(b.name);
+      });
 
-    groups.sort((a, b) => {
-      if (a.name.toLowerCase() === "all") return -1;
-      if (b.name.toLowerCase() === "all") return 1;
-      return a.name.localeCompare(b.name);
-    });
+    if (!groups.length) {
+      throw new Error('Group information could not be aggregated.');
+    }
 
-    // --- Build HTML table like main version ---
     let html = `
       <table id="groupTable" style="border-collapse:collapse;width:100%;font-family:inherit;font-size:14px;color:#000;">
         <thead>
@@ -2052,18 +2092,22 @@ async function loadGroupInfo() {
     `;
 
     groups.forEach(g => {
-      let sourcesHTML = "";
+      let sourcesHTML = '';
 
-      if (g.nfrCodes.length) {
+      if (g.nfrCodes.length && Object.keys(nfrMap).length) {
         sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
         sourcesHTML += `<div style="white-space:pre-line;">`;
         g.nfrCodes.forEach(code => {
-          const description = nfrMap[code] || "(Description not found)";
+          const description = nfrMap[code] || '(Description not found)';
           sourcesHTML += `${code}\t${description}\n`;
         });
         sourcesHTML += `</div>`;
+      } else if (g.sources.length) {
+        sourcesHTML = g.sources.join('\n');
+      } else if (g.nfrCodes.length) {
+        sourcesHTML = g.nfrCodes.join('\n');
       } else {
-        sourcesHTML = g.sources.length ? g.sources.join('\n') : 'All Sources';
+        sourcesHTML = 'All Sources';
       }
 
       const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
@@ -2077,7 +2121,7 @@ async function loadGroupInfo() {
       `;
     });
 
-    html += "</tbody></table>";
+    html += '</tbody></table>';
 
     const container = document.getElementById('group-info');
     container.style.fontFamily = 'system-ui, sans-serif';
@@ -2085,8 +2129,9 @@ async function loadGroupInfo() {
     container.style.color = '#000';
     container.innerHTML = html;
 
+    console.log(`Rendered group info for ${groups.length} groups (Supabase rows: ${groupRows.length}).`);
   } catch (err) {
-    console.error("Error loading group info:", err);
+    console.error('Error loading group info:', err);
     document.getElementById('group-info').innerHTML =
       "<p class='text-red-600'>⚠️ Could not load group or NFRCodes information.</p>";
   }
