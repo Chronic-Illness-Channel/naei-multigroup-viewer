@@ -1029,6 +1029,11 @@ function updateChart(){
   refreshButtons();
 }
 
+window.addEventListener('resize', () => {
+  clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(updateChart, 200);
+});
+
 async function renderInitialView() {
   return new Promise(resolve => {
     requestAnimationFrame(() => {
