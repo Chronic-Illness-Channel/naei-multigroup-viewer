@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<head>
   <meta charset="utf-8" />
   <title>NAEI Multi-Group Pollutant Viewer</title>
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
@@ -626,6 +625,8 @@ function updateChart(){
   chart.draw(dataTable, options);
   document.getElementById('chart_div').classList.add('visible');
 
+
+
   // update visible title on page
   const titleEl = document.getElementById('chartTitle');
   titleEl.textContent = `${pollutant}${unit ? " (" + unit + ")" : ""}`;
@@ -676,6 +677,11 @@ function updateChart(){
   refreshGroupDropdowns();
   refreshButtons();
 }
+
+window.addEventListener('resize', () => {
+  clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(updateChart, 200);
+});
 
 function setupDownloadButton() {
   const dl = document.getElementById('downloadBtn');
