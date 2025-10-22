@@ -590,34 +590,47 @@ function updateChart(){
       height: '70%'
     }
   };
-
   // --- Force first and last year to always display on the X axis ---
   const availableYears = years.map(y => parseInt(y, 10));
   let tickYears = [...availableYears];
 
-  // Determine how many ticks to show based on screen width
+  // Decide how many labels we can safely display
   const maxTicks = window.innerWidth < 480 ? 5 : window.innerWidth < 768 ? 8 : 12;
 
-  // Evenly space ticks if there are too many years
   if (tickYears.length > maxTicks) {
-    const step = Math.ceil(tickYears.length / (maxTicks - 2)); // keep room for first/last
+    const step = Math.ceil((tickYears.length - 2) / (maxTicks - 2));
     const spaced = [tickYears[0]];
-    for (let i = step; i < tickYears.length - 1; i += step) spaced.push(tickYears[i]);
+    for (let i = 1; i < tickYears.length - 1; i += step) spaced.push(tickYears[i]);
     spaced.push(tickYears[tickYears.length - 1]);
     tickYears = spaced;
   }
 
-  // Ensure unique and sorted
+  // Guarantee first & last years are included
+  if (!tickYears.includes(availableYears[0])) tickYears.unshift(availableYears[0]);
+  if (!tickYears.includes(availableYears[availableYears.length - 1]))
+    tickYears.push(availableYears[availableYears.length - 1]);
+
   tickYears = Array.from(new Set(tickYears)).sort((a, b) => a - b);
 
-  // Apply custom ticks to the chart
+  // Compute a safe min spacing to prevent overlap on small screens
+  let filteredTicks = tickYears;
+  if (window.innerWidth < 480 && tickYears.length > 2) {
+    filteredTicks = tickYears.filter((y, i, arr) => {
+      const prev = arr[i - 1];
+      return !prev || y - prev >= 2; // skip adjacent overlapping years
+    });
+  }
+
   options.hAxis = {
     title: 'Year',
-    ticks: tickYears.map(y => ({ v: y.toString(), f: y.toString() })),
+    ticks: filteredTicks.map(y => ({ v: y.toString(), f: y.toString() })),
     textStyle: { fontSize: 11 },
     slantedText: window.innerWidth < 600,
-    slantedTextAngle: 45
+    slantedTextAngle: 45,
+    showTextEvery: 1, // force all custom ticks to show
+    viewWindow: { min: availableYears[0], max: availableYears[availableYears.length - 1] }
   };
+
  
 
   // draw chart and show pollutant as visible page title
