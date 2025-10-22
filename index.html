@@ -592,6 +592,33 @@ function updateChart(){
     }
   };
 
+  // --- Force first and last year to always display on the X axis ---
+  const availableYears = years.map(y => parseInt(y, 10));
+  let tickYears = [...availableYears];
+
+  // Determine how many ticks to show based on screen width
+  const maxTicks = window.innerWidth < 480 ? 5 : window.innerWidth < 768 ? 8 : 12;
+
+  // Evenly space ticks if there are too many years
+  if (tickYears.length > maxTicks) {
+    const step = Math.ceil(tickYears.length / (maxTicks - 2)); // keep room for first/last
+    const spaced = [tickYears[0]];
+    for (let i = step; i < tickYears.length - 1; i += step) spaced.push(tickYears[i]);
+    spaced.push(tickYears[tickYears.length - 1]);
+    tickYears = spaced;
+  }
+
+  // Ensure unique and sorted
+  tickYears = Array.from(new Set(tickYears)).sort((a, b) => a - b);
+
+  // Apply custom ticks to the chart
+  options.hAxis = {
+    title: 'Year',
+    ticks: tickYears.map(y => ({ v: y.toString(), f: y.toString() })),
+    textStyle: { fontSize: 11 },
+    slantedText: window.innerWidth < 600,
+    slantedTextAngle: 45
+  };
  
 
   // draw chart and show pollutant as visible page title
