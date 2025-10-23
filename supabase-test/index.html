@@ -189,7 +189,9 @@
   <div id="mainContent" aria-hidden="true">
     <div class="title-row">
   <h2 class="main-title"><span class="title-part title-part-1">NAEI Multi-Group</span> <span class="title-part title-part-2">Pollutant Viewer</span></h2>
-      <img id="cicLogo" src="CIC - Square - Border - Words - Alpha 360x360.png" alt="CIC Logo">
+      <a href="https://www.youtube.com/@ChronicIllnessChannel" target="_blank" rel="noopener" style="cursor:pointer;">
+        <img id="cicLogo" src="CIC - Square - Border - Words - Alpha 360x360.png" alt="CIC Logo">
+      </a>
     </div>
 <details class="my-4 bg-gray-50 border border-gray-300 rounded-2xl p-4 shadow-sm">
   <summary class="cursor-pointer text-lg font-semibold text-blue-700 hover:text-blue-900">
@@ -201,10 +203,7 @@
       <strong>Quick Start Guide:</strong> Select a <strong>pollutant</strong>, choose one or more <strong>groups</strong> to compare, set your <strong>year range</strong>, and view the interactive chart.
     </p>
 
-    <div style="background: #E3F2FD; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0;">
-      <strong>🆕 New Features:</strong> Share chart configurations via URL, copy charts to clipboard, and export professional-quality images with full branding.
-    </div>
-
+ 
     <h3 class="font-semibold text-blue-700">Essential Steps</h3>
     <p>
     <ol class="list-decimal list-inside space-y-2">
@@ -214,7 +213,7 @@
       <li><strong>Interact:</strong> Hover over chart points, click legend items to show/hide lines</li>
       <li><strong>Export & Share:</strong> Download images, export data, or share via URL</li>
     </ol>
-
+<!-- 
     <div style="text-align: center; margin: 25px 0;">
       <a href="../help.html" 
          style="display: inline-block; background: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 2px 8px rgba(33,150,243,0.3);">
@@ -224,6 +223,7 @@
 
     <p style="font-size: 14px; color: #666; text-align: center;">
       Complete documentation covers sharing, exporting, group details, troubleshooting, and all advanced features.
+ -->
   </div>
     <p>
       Click <strong>“+ Add Group”</strong> to add a new group comparison (e.g., Road Transport, Power Stations, Domestic Combustion).<br>
@@ -262,51 +262,58 @@
       Click again (the button will change to <strong>“✅ Enable Smoothing”</strong>) to re-enable smooth, curved lines.
     </p>
 
-    <h3 class="font-semibold text-blue-700">7️⃣ Download Options</h3>
-    <p>You can export both the chart and the data for your own analysis or reporting.</p>
+<h3 class="font-semibold text-blue-700">7️⃣ Download Options</h3>
+<p>You can export both the chart and its underlying data for your own analysis or reporting.</p>
 
-    <p>
-      <strong>📊 Download Chart as PNG</strong><br>
-      Click <strong>“⬇️ Download Chart as PNG”</strong> to save the chart as an image.<br>
-      The export includes:
-      <ul class="list-disc list-inside ml-4">
-        <li>The chart</li>
-        <li>The custom colour legend</li>
-        <li>The pollutant name and emission unit</li>
-        <li>A small Defra/DESNZ footer and the CIC logo</li>
-      </ul>
-    </p>
+<p>
+  <strong>📊 Download Chart as PNG</strong><br>
+  Click <strong>“⬇️ Download Chart as PNG”</strong> to save the current chart as an image.<br>
+  The exported image includes:
+  <ul class="list-disc list-inside ml-4">
+    <li>The chart itself</li>
+    <li>Custom colour legend</li>
+    <li>Pollutant name and emission unit</li>
 
-    <p>
-      <strong>📄 Download Data</strong><br>
-      <strong>CSV:</strong> Click “📄 Download Data – CSV” for a spreadsheet-compatible text file.<br>
-      <strong>Excel:</strong> Click “📊 Download Data – Excel” for a formatted Excel workbook.<br>
-      Each data file includes:
-      <ul class="list-disc list-inside ml-4">
-        <li>A first line showing the pollutant name and emission unit</li>
-        <li>A table with groups as rows and years as columns</li>
-        <li>A footer row with the download timestamp</li>
-      </ul>
-    </p>
-<h3 class="font-semibold text-blue-700">8️⃣ View Group Details</h3>
+  </ul>
+</p>
+
+<p>
+  <strong>📄 Download Data</strong><br>
+  <strong>CSV:</strong> Click “📄 Download Data – CSV” for a spreadsheet-friendly text file.<br>
+  <strong>Excel:</strong> Click “📊 Download Data – Excel” for a formatted Excel workbook.<br>
+  Each file includes:
+  <ul class="list-disc list-inside ml-4">
+    <li>Pollutant name and emission unit in the first line</li>
+    <li>Table with groups as rows and years as columns</li>
+    <li>Footer row with download timestamp</li>
+  </ul>
+</p>
+
+<h3 class="font-semibold text-blue-700">8️⃣ Share Your Chart</h3>
+<p>
+  Click the <strong>Share</strong> button to copy a unique link or chart image.<br>
+  You can easily share your current view with others, or paste the chart image into emails and documents.<br>
+  The shared link will open the viewer with your selected pollutant, groups, and year range.
+</p>
+
+<h3 class="font-semibold text-blue-700">9️⃣ View Group Details</h3>
 <p>
   Use the <strong>“📘 See Group Info”</strong> section below the group selector to view details of how each group is built.<br>
-  This table shows the <strong>Source Names</strong> and <strong>Fuel Types</strong>, from the NAEI data, that have been combined to create each group.<br>
-  If a group includes all sources or all fuel types, these will be shown as <em>“All Sources”</em> or <em>“All Fuel Types”</em> respectively.
+  The table shows <strong>Source Names</strong> and <strong>Fuel Types</strong> from the NAEI data that have been combined to create each group.<br>
+  If a group includes all sources or all fuel types, these will be shown as <em>“All Sources”</em> or <em>“All Fuel Types”</em>.
 </p>
-	
-    <h3 class="font-semibold text-blue-700">9️⃣ Licensing and Attribution</h3>
-    <p>
-      © Crown copyright (Defra & DESNZ) and available under the
-      <strong>Open Government Licence (OGL)</strong>.<br>
-      See links in the page footer for full details.
-    </p>
-  </div>
+
+<h3 class="font-semibold text-blue-700">🔟 Licensing and Attribution</h3>
+<p>
+  © Crown copyright (Defra & DESNZ) and available under the
+  <strong>Open Government Licence (OGL)</strong>.<br>
+  See links beneath the chart for full details.
+</p>
 </details>
 
     <div>
       <label for="pollutantSelect">Pollutant:</label>
-      <select id="pollutantSelect"><option value="">Select pollutant</option></select>
+  <select id="pollutantSelect" name="pollutantSelect"><option value="">Select pollutant</option></select>
     </div>
 
     <div id="groupContainer"></div>
@@ -323,10 +330,10 @@
 
     <div>
       <label for="startYear">Start Year:</label>
-      <select id="startYear"></select>
+  <select id="startYear" name="startYear"></select>
 
       <label for="endYear">End Year:</label>
-      <select id="endYear"></select>
+  <select id="endYear" name="endYear"></select>
 
       <button id="downloadBtn">⬇️ Download Chart as PNG</button>
 	  <button id="toggleSmoothBtn">🚫 Disable Smoothing</button>
@@ -344,10 +351,10 @@
   <a href="https://naei.energysecurity.gov.uk" target="_blank" rel="noopener">naei.energysecurity.gov.uk</a> 
   licensed under the <a href="http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noopener">Open Government Licence (OGL)</a>.
   <br>
-  <strong>YouTube Channel:</strong> <a href="https://www.youtube.com/@ChronicIllnessChannel" target="_blank" rel="noopener">https://www.youtube.com/@ChronicIllnessChannel</a>
+  <strong>YouTube Channel:</strong> <a href="https://www.youtube.com/@ChronicIllnessChannel" target="_blank" rel="noopener">www.youtube.com/@ChronicIllnessChannel</a>
   <br>
   <span style="font-size: 0.8em; color: #666; margin-top: 4px; display: inline-block;">
-    Version: v2.0-beta (Supabase) • Build: 2025.10.20
+    Version: v2.0 (Supabase) • Build: 2025.10.23
   </span>
 </footer>
 
@@ -678,6 +685,7 @@ function addGroupSelector(defaultValue = "", usePlaceholder = true){
 
   // group select
   const sel = document.createElement('select');
+  sel.name = 'groupSelector';
   if (usePlaceholder){
     const ph = new Option('Select group','');
     ph.disabled = true; ph.selected = true;
@@ -1737,8 +1745,8 @@ function showShareDialog(shareUrl) {
     <div style="margin: 16px 0;">
       <label style="display: block; margin-bottom: 8px; font-weight: 600;">Shareable URL:</label>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="shareUrlInput" value="${shareUrl}" readonly 
-               style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #f9f9f9;">
+   <input type="text" id="shareUrlInput" name="shareUrlInput" value="${shareUrl}" readonly 
+     style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; background: #f9f9f9;">
         <button id="copyUrlBtn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
           📋 Copy
         </button>
@@ -1747,7 +1755,7 @@ function showShareDialog(shareUrl) {
     
     <div style="margin: 16px 0;">
       <label style="display: flex; align-items: center; margin-bottom: 12px; cursor: pointer;">
-        <input type="checkbox" id="includeImageCheckbox" style="margin-right: 8px;">
+  <input type="checkbox" id="includeImageCheckbox" name="includeImageCheckbox" style="margin-right: 8px;">
         <span style="font-weight: 600;">🖼️ Copy chart image to clipboard for pasting into email</span>
       </label>
       
@@ -2171,23 +2179,25 @@ async function loadGroupInfo() {
     `;
 
     groups.forEach(g => {
-      let sourcesHTML = '';
-
-      if (g.nfrCodes.length && Object.keys(nfrMap).length) {
-        sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
-        sourcesHTML += `<div style="white-space:pre-line;">`;
-        g.nfrCodes.forEach(code => {
-          const description = nfrMap[code] || '(Description not found)';
-          sourcesHTML += `${code}\t${description}\n`;
-        });
-        sourcesHTML += `</div>`;
-      } else if (g.sources.length) {
-        sourcesHTML = g.sources.join('\n');
-      } else if (g.nfrCodes.length) {
-        sourcesHTML = g.nfrCodes.join('\n');
-      } else {
-        sourcesHTML = 'All Sources';
-      }
+        let sourcesHTML = '';
+        // Filter NFR codes to only valid ones
+        const validNfrCodes = g.nfrCodes.filter(code => code && code !== 'NULL' && code !== '' && code !== null);
+        if (validNfrCodes.length) {
+          sourcesHTML += `<span style="text-decoration:underline;font-weight:600;display:block;margin-bottom:4px;">All Sources from the following NFR Code categories:</span>`;
+          sourcesHTML += `<div style="white-space:pre-line;">`;
+          validNfrCodes.forEach(code => {
+            const description = nfrMap[code];
+            if (description && description !== 'NULL') {
+              sourcesHTML += `${code}: ${description}\n`;
+            } else {
+              sourcesHTML += `${code}\n`;
+            }
+          });
+          sourcesHTML += `</div>`;
+        } else {
+          const validSources = g.sources.filter(s => s != null && s !== '' && s !== 'NULL');
+          sourcesHTML = validSources.length ? validSources.join('\n') : 'All Sources';
+        }
 
       const activitiesText = g.activities.length ? g.activities.join('\n') : 'All Fuel Types';
 
