@@ -138,6 +138,22 @@
                     ? Math.round(Object.values(sessionLengths).reduce((a, b) => a + b, 0) / Object.values(sessionLengths).length)
                     : 0;
 
+                // Daily breakdown calculation
+                const dailyStats = {};
+                events.forEach(e => {
+                    const day = e.timestamp.slice(0, 10); // YYYY-MM-DD
+                    if (!dailyStats[day]) {
+                        dailyStats[day] = {
+                            events: 0,
+                            sessions: new Set(),
+                            users: new Set()
+                        };
+                    }
+                    dailyStats[day].events++;
+                    dailyStats[day].sessions.add(e.session_id);
+                    dailyStats[day].users.add(e.user_fingerprint);
+                });
+
                 // Render dashboard
                 dashboard.innerHTML = `
                     <div class="card">
@@ -146,6 +162,16 @@
                         <p>Unique Sessions: <span class="metric">${uniqueSessions}</span></p>
                         <p>Unique Users: <span class="metric">${uniqueUsers}</span></p>
                         <p>Avg Session Length: <span class="metric">${avgSessionLength} min</span></p>
+                    </div>
+
+                    <div class="card">
+                        <h3>📅 Daily Breakdown</h3>
+                        <table class="table">
+                            <tr><th>Date</th><th>Total Events</th><th>Unique Sessions</th><th>Unique Users</th></tr>
+                            ${Object.entries(dailyStats).sort(([a], [b]) => b.localeCompare(a)).map(([date, stats]) =>
+                                `<tr><td>${date}</td><td>${stats.events}</td><td>${stats.sessions.size}</td><td>${stats.users.size}</td></tr>`
+                            ).join('') || '<tr><td colspan="4">No data available</td></tr>'}
+                        </table>
                     </div>
 
                     <div class="card">
