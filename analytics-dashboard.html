@@ -128,14 +128,19 @@
 
                 Object.entries(sessionEvents).forEach(([sid, timestamps]) => {
                     if (timestamps.length > 1) {
-                        const sorted = timestamps.sort();
+                        // Sort numerically
+                        const sorted = timestamps.sort((a, b) => a - b);
                         const duration = (sorted[sorted.length - 1] - sorted[0]) / (1000 * 60); // minutes
-                        sessionLengths[sid] = Math.round(duration);
+                        if (duration >= 0) {
+                            sessionLengths[sid] = Math.round(duration);
+                        }
                     }
                 });
 
-                const avgSessionLength = Object.values(sessionLengths).length > 0 
-                    ? Math.round(Object.values(sessionLengths).reduce((a, b) => a + b, 0) / Object.values(sessionLengths).length)
+                // Only use non-negative durations for average
+                const validDurations = Object.values(sessionLengths).filter(d => d >= 0);
+                const avgSessionLength = validDurations.length > 0 
+                    ? Math.round(validDurations.reduce((a, b) => a + b, 0) / validDurations.length)
                     : 0;
 
                 // Daily breakdown calculation
