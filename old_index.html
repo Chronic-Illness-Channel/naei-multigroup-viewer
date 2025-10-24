@@ -5,28 +5,7 @@
   <title>NAEI Multi-Group Pollutant Viewer</title>
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
-
-  <!-- Social preview / link preview meta tags -->
-  <meta name="description" content="NAEI Multi-Group Pollutant Viewer">
-  <!-- Open Graph (Facebook, LinkedIn, Slack, etc.) -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="NAEI Multi-Group Pollutant Viewer">
-  <meta property="og:description" content="Compare emissions from grouped NAEI sources across years. Interactive charts, CSV/XLSX export and downloadable images.">
-  <meta property="og:url" content="https://github.com/Chronic-Illness-Channel/naei-multigroup-viewer">
-  <meta property="og:image" content="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
-  <meta property="og:image:width" content="1120">
-  <meta property="og:image:height" content="630">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="NAEI Multi-Group Pollutant Viewer">
-  <meta name="twitter:description" content="Compare emissions from grouped NAEI sources across years.">
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
-  <meta name="twitter:site" content="@Chronic_Channel">
-  <meta name="twitter:creator" content="@Chronic_Channel">
-  <!-- Legacy image hint -->
-  <link rel="image_src" href="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
-
+  
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
@@ -426,16 +405,7 @@ function getUserCountry() {
 // Generate a privacy-friendly user fingerprint
 function generateUserFingerprint() {
   if (userFingerprint) return userFingerprint;
-
-  // Get or create persistent UUID for this browser
-  let uuid = localStorage.getItem('naei_analytics_uuid');
-  if (!uuid) {
-    uuid = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-    );
-    localStorage.setItem('naei_analytics_uuid', uuid);
-  }
-
+  
   // Collect non-invasive browser info for analytics
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -443,18 +413,17 @@ function generateUserFingerprint() {
   ctx.font = '14px Arial';
   ctx.fillText('Browser fingerprint', 2, 2);
   const canvasData = canvas.toDataURL();
-
+  
   const fingerprint = [
-    uuid,
     navigator.userAgent,
     navigator.language,
     screen.width + 'x' + screen.height,
     new Date().getTimezoneOffset(),
-    canvasData.slice(-50)
+    canvasData.slice(-50) // Just last 50 chars for basic uniqueness
   ].join('|');
-
+  
   // Hash it for privacy
-  userFingerprint = btoa(fingerprint).substr(0, 24); // Slightly longer for more uniqueness
+  userFingerprint = btoa(fingerprint).substr(0, 16);
   return userFingerprint;
 }
 
