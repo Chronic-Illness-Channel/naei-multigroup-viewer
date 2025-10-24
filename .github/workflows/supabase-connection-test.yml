@@ -1,0 +1,19 @@
+name: Supabase Connection Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+      - name: Test Supabase connection
+        env:
+          SUPABASE_HOST: ${{ secrets.SUPABASE_HOST }}
+          SUPABASE_DB: ${{ secrets.SUPABASE_DB }}
+          SUPABASE_USER: ${{ secrets.SUPABASE_USER }}
+          SUPABASE_PASSWORD: ${{ secrets.SUPABASE_PASSWORD }}
+        run: |
+          psql "host=$SUPABASE_HOST dbname=$SUPABASE_DB user=$SUPABASE_USER password=$SUPABASE_PASSWORD sslmode=require" -c '\conninfo'
