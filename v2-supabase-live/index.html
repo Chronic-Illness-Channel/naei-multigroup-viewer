@@ -5,7 +5,28 @@
   <title>NAEI Multi-Group Pollutant Viewer</title>
   <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
-  
+
+  <!-- Social preview / link preview meta tags -->
+  <meta name="description" content="NAEI Multi-Group Pollutant Viewer">
+  <!-- Open Graph (Facebook, LinkedIn, Slack, etc.) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="NAEI Multi-Group Pollutant Viewer">
+  <meta property="og:description" content="Compare emissions from grouped NAEI sources across years. Interactive charts, CSV/XLSX export and downloadable images.">
+  <meta property="og:url" content="https://github.com/Chronic-Illness-Channel/naei-multigroup-viewer">
+  <meta property="og:image" content="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
+  <meta property="og:image:width" content="1120">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NAEI Multi-Group Pollutant Viewer">
+  <meta name="twitter:description" content="Compare emissions from grouped NAEI sources across years.">
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
+  <meta name="twitter:site" content="@Chronic_Channel">
+  <meta name="twitter:creator" content="@Chronic_Channel">
+  <!-- Legacy image hint -->
+  <link rel="image_src" href="https://raw.githubusercontent.com/Chronic-Illness-Channel/naei-multigroup-viewer/4edd238fc210f2019c4d6b9101bee18172148270/CIC%20-%20NAEI%20Multi-Group%20Viewer%20Thumbnail.1120x630.png">
+
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
@@ -1220,30 +1241,66 @@ function setupDownloadButton() {
         const channelText = "Youtube Channel: youtube.com/@chronicillnesschannel";
         const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
 
+        // --- Footer text wrapping ---
         ctx.font = '12px system-ui, sans-serif';
         ctx.fillStyle = '#555';
         ctx.textAlign = 'center';
-        ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
-        
-        // Draw YouTube channel with bold label
-        const channelY = legendY + img.height + 35;
+        const maxFooterWidth = unscaledWidth - 40;
+        function wrapText(text, maxWidth) {
+          const words = text.split(' ');
+          let lines = [], line = '';
+          for (let n = 0; n < words.length; n++) {
+            const testLine = line + (line ? ' ' : '') + words[n];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && line) {
+              lines.push(line);
+              line = words[n];
+            } else {
+              line = testLine;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        }
+        const footerLines = wrapText(footerText, maxFooterWidth);
+        let footerY = legendY + img.height + 20;
+        footerLines.forEach((line, i) => {
+          ctx.fillText(line, unscaledWidth / 2, footerY + i * 16);
+        });
+        footerY += footerLines.length * 16;
+
+        // Draw YouTube channel with bold label, also wrapped if needed
         const boldText = "Youtube Channel: ";
         const normalText = "youtube.com/@chronicillnesschannel";
-        
-        // Measure text widths for positioning
         ctx.font = 'bold 12px system-ui, sans-serif';
         const boldWidth = ctx.measureText(boldText).width;
         ctx.font = '12px system-ui, sans-serif';
         const normalWidth = ctx.measureText(normalText).width;
         const totalWidth = boldWidth + normalWidth;
-        
-        // Draw bold part
-        ctx.font = 'bold 12px system-ui, sans-serif';
-        ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
-        
-        // Draw normal part
-        ctx.font = '12px system-ui, sans-serif';
-        ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
+        let channelY = footerY + 5;
+        if (totalWidth > maxFooterWidth) {
+          // Wrap channel text if needed
+          ctx.font = 'bold 12px system-ui, sans-serif';
+          const boldLines = wrapText(boldText, maxFooterWidth);
+          boldLines.forEach((line, i) => {
+            ctx.fillText(line, unscaledWidth / 2, channelY + i * 16);
+          });
+          channelY += boldLines.length * 16;
+          ctx.font = '12px system-ui, sans-serif';
+          const normalLines = wrapText(normalText, maxFooterWidth);
+          normalLines.forEach((line, i) => {
+            ctx.fillText(line, unscaledWidth / 2, channelY + i * 16);
+          });
+          channelY += normalLines.length * 16;
+        } else {
+          // Draw bold part
+          ctx.font = 'bold 12px system-ui, sans-serif';
+          ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
+          // Draw normal part
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
+          channelY += 16;
+        }
 
         // --- Download ---
         const link = document.createElement('a');
@@ -1315,7 +1372,7 @@ async function init(){
     
     // Track page load
     trackAnalytics('page_load', {
-      version: 'v2.0-beta',
+      version: 'v2.0 (Supabase)',
       load_time: Date.now(),
       screen_resolution: screen.width + 'x' + screen.height,
       viewport: window.innerWidth + 'x' + window.innerHeight
