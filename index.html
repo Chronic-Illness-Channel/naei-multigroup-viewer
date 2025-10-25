@@ -1241,30 +1241,66 @@ function setupDownloadButton() {
         const channelText = "Youtube Channel: youtube.com/@chronicillnesschannel";
         const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
 
+        // --- Footer text wrapping ---
         ctx.font = '12px system-ui, sans-serif';
         ctx.fillStyle = '#555';
         ctx.textAlign = 'center';
-        ctx.fillText(footerText, unscaledWidth / 2, legendY + img.height + 20);
-        
-        // Draw YouTube channel with bold label
-        const channelY = legendY + img.height + 35;
+        const maxFooterWidth = unscaledWidth - 40;
+        function wrapText(text, maxWidth) {
+          const words = text.split(' ');
+          let lines = [], line = '';
+          for (let n = 0; n < words.length; n++) {
+            const testLine = line + (line ? ' ' : '') + words[n];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && line) {
+              lines.push(line);
+              line = words[n];
+            } else {
+              line = testLine;
+            }
+          }
+          if (line) lines.push(line);
+          return lines;
+        }
+        const footerLines = wrapText(footerText, maxFooterWidth);
+        let footerY = legendY + img.height + 20;
+        footerLines.forEach((line, i) => {
+          ctx.fillText(line, unscaledWidth / 2, footerY + i * 16);
+        });
+        footerY += footerLines.length * 16;
+
+        // Draw YouTube channel with bold label, also wrapped if needed
         const boldText = "Youtube Channel: ";
         const normalText = "youtube.com/@chronicillnesschannel";
-        
-        // Measure text widths for positioning
         ctx.font = 'bold 12px system-ui, sans-serif';
         const boldWidth = ctx.measureText(boldText).width;
         ctx.font = '12px system-ui, sans-serif';
         const normalWidth = ctx.measureText(normalText).width;
         const totalWidth = boldWidth + normalWidth;
-        
-        // Draw bold part
-        ctx.font = 'bold 12px system-ui, sans-serif';
-        ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
-        
-        // Draw normal part
-        ctx.font = '12px system-ui, sans-serif';
-        ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
+        let channelY = footerY + 5;
+        if (totalWidth > maxFooterWidth) {
+          // Wrap channel text if needed
+          ctx.font = 'bold 12px system-ui, sans-serif';
+          const boldLines = wrapText(boldText, maxFooterWidth);
+          boldLines.forEach((line, i) => {
+            ctx.fillText(line, unscaledWidth / 2, channelY + i * 16);
+          });
+          channelY += boldLines.length * 16;
+          ctx.font = '12px system-ui, sans-serif';
+          const normalLines = wrapText(normalText, maxFooterWidth);
+          normalLines.forEach((line, i) => {
+            ctx.fillText(line, unscaledWidth / 2, channelY + i * 16);
+          });
+          channelY += normalLines.length * 16;
+        } else {
+          // Draw bold part
+          ctx.font = 'bold 12px system-ui, sans-serif';
+          ctx.fillText(boldText, (unscaledWidth - totalWidth) / 2 + boldWidth / 2, channelY);
+          // Draw normal part
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.fillText(normalText, (unscaledWidth - totalWidth) / 2 + boldWidth + normalWidth / 2, channelY);
+          channelY += 16;
+        }
 
         // --- Download ---
         const link = document.createElement('a');
